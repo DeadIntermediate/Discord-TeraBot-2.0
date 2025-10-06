@@ -1,0 +1,311 @@
+import { sql, relations } from "drizzle-orm";
+import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, unique } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+});
+
+export const discordServers = pgTable("discord_servers", {
+  id: varchar("id").primaryKey(), // Discord guild ID
+  name: text("name").notNull(),
+  ownerId: varchar("owner_id").notNull(),
+  memberCount: integer("member_count").default(0),
+  isActive: boolean("is_active").default(true),
+  welcomeChannelId: varchar("welcome_channel_id"),
+  welcomeMessage: text("welcome_message"),
+  moderationChannelId: varchar("moderation_channel_id"),
+  staffLogChannelId: varchar("staff_log_channel_id"),
+  settings: jsonb("settings").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const discordUsers = pgTable("discord_users", {
+  id: varchar("id").primaryKey(), // Discord user ID
+  username: text("username").notNull(),
+  discriminator: text("discriminator"),
+  avatar: text("avatar"),
+  isBot: boolean("is_bot").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const serverMembers = pgTable("server_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serverId: varchar("server_id").notNull().references(() => discordServers.id),
+  userId: varchar("user_id").notNull().references(() => discordUsers.id),
+  xp: integer("xp").default(0), // Legacy field, kept for compatibility
+  level: integer("level").default(1), // Legacy field, kept for compatibility
+  textXp: integer("text_xp").default(0),
+  textLevel: integer("text_level").default(1),
+  voiceXp: integer("voice_xp").default(0),
+  voiceLevel: integer("voice_level").default(1),
+  globalLevel: integer("global_level").default(1),
+  messageCount: integer("message_count").default(0),
+  voiceTime: integer("voice_time").default(0), // in minutes
+  joinedAt: timestamp("joined_at").defaultNow(),
+  leftAt: timestamp("left_at"),
+}, (table) => ({
+  serverUserUnique: unique().on(table.serverId, table.userId),
+}));
+
+export const moderationLogs = pgTable("moderation_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serverId: varchar("server_id").notNull().references(() => discordServers.id),
+  moderatorId: varchar("moderator_id").notNull().references(() => discordUsers.id),
+  targetUserId: varchar("target_user_id").notNull().references(() => discordUsers.id),
+  action: text("action").notNull(), // ban, kick, mute, warn, etc.
+  reason: text("reason"),
+  duration: integer("duration"), // in minutes for temporary actions
+  channelId: varchar("channel_id"),
+  messageId: varchar("message_id"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const tickets = pgTable("tickets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serverId: varchar("server_id").notNull().references(() => discordServers.id),
+  userId: varchar("user_id").notNull().references(() => discordUsers.id),
+  channelId: varchar("channel_id").notNull(),
+  subject: text("subject").notNull(),
+  status: text("status").default("open"), // open, closed, resolved
+  priority: text("priority").default("medium"), // low, medium, high, urgent
+  assignedTo: varchar("assigned_to").references(() => discordUsers.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  closedAt: timestamp("closed_at"),
+});
+
+export const giveaways = pgTable("giveaways", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serverId: varchar("server_id").notNull().references(() => discordServers.id),
+  channelId: varchar("channel_id").notNull(),
+  messageId: varchar("message_id").notNull(),
+  hostId: varchar("host_id").notNull().references(() => discordUsers.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  prize: text("prize").notNull(),
+  winnerCount: integer("winner_count").default(1),
+  requirements: jsonb("requirements").default({}),
+  entries: jsonb("entries").default([]), // array of user IDs
+  winners: jsonb("winners").default([]), // array of user IDs
+  isActive: boolean("is_active").default(true),
+  endsAt: timestamp("ends_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const roleReactions = pgTable("role_reactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serverId: varchar("server_id").notNull().references(() => discordServers.id),
+  channelId: varchar("channel_id").notNull(),
+  messageId: varchar("message_id").notNull(),
+  emoji: text("emoji").notNull(),
+  roleId: varchar("role_id").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const streamNotifications = pgTable("stream_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serverId: varchar("server_id").notNull().references(() => discordServers.id),
+  channelId: varchar("channel_id").notNull(),
+  platform: text("platform").notNull(), // twitch, youtube, kick
+  username: text("username").notNull(),
+  messageId: varchar("message_id"),
+  notificationMessage: text("notification_message"),
+  isLive: boolean("is_live").default(false),
+  isActive: boolean("is_active").default(true),
+  lastChecked: timestamp("last_checked"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const savedEmbeds = pgTable("saved_embeds", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serverId: varchar("server_id").notNull().references(() => discordServers.id),
+  name: text("name").notNull(),
+  embedData: jsonb("embed_data").notNull(), // Full embed JSON structure
+  createdBy: varchar("created_by").notNull().references(() => discordUsers.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Relations
+export const discordServersRelations = relations(discordServers, ({ many }) => ({
+  members: many(serverMembers),
+  moderationLogs: many(moderationLogs),
+  tickets: many(tickets),
+  giveaways: many(giveaways),
+  roleReactions: many(roleReactions),
+  streamNotifications: many(streamNotifications),
+  savedEmbeds: many(savedEmbeds),
+}));
+
+export const discordUsersRelations = relations(discordUsers, ({ many }) => ({
+  serverMemberships: many(serverMembers),
+  moderationLogs: many(moderationLogs),
+  moderatedLogs: many(moderationLogs),
+  tickets: many(tickets),
+  hostedGiveaways: many(giveaways),
+}));
+
+export const serverMembersRelations = relations(serverMembers, ({ one }) => ({
+  server: one(discordServers, {
+    fields: [serverMembers.serverId],
+    references: [discordServers.id],
+  }),
+  user: one(discordUsers, {
+    fields: [serverMembers.userId],
+    references: [discordUsers.id],
+  }),
+}));
+
+export const moderationLogsRelations = relations(moderationLogs, ({ one }) => ({
+  server: one(discordServers, {
+    fields: [moderationLogs.serverId],
+    references: [discordServers.id],
+  }),
+  moderator: one(discordUsers, {
+    fields: [moderationLogs.moderatorId],
+    references: [discordUsers.id],
+  }),
+  targetUser: one(discordUsers, {
+    fields: [moderationLogs.targetUserId],
+    references: [discordUsers.id],
+  }),
+}));
+
+export const ticketsRelations = relations(tickets, ({ one }) => ({
+  server: one(discordServers, {
+    fields: [tickets.serverId],
+    references: [discordServers.id],
+  }),
+  user: one(discordUsers, {
+    fields: [tickets.userId],
+    references: [discordUsers.id],
+  }),
+  assignee: one(discordUsers, {
+    fields: [tickets.assignedTo],
+    references: [discordUsers.id],
+  }),
+}));
+
+export const giveawaysRelations = relations(giveaways, ({ one }) => ({
+  server: one(discordServers, {
+    fields: [giveaways.serverId],
+    references: [discordServers.id],
+  }),
+  host: one(discordUsers, {
+    fields: [giveaways.hostId],
+    references: [discordUsers.id],
+  }),
+}));
+
+export const roleReactionsRelations = relations(roleReactions, ({ one }) => ({
+  server: one(discordServers, {
+    fields: [roleReactions.serverId],
+    references: [discordServers.id],
+  }),
+}));
+
+export const streamNotificationsRelations = relations(streamNotifications, ({ one }) => ({
+  server: one(discordServers, {
+    fields: [streamNotifications.serverId],
+    references: [discordServers.id],
+  }),
+}));
+
+export const savedEmbedsRelations = relations(savedEmbeds, ({ one }) => ({
+  server: one(discordServers, {
+    fields: [savedEmbeds.serverId],
+    references: [discordServers.id],
+  }),
+  creator: one(discordUsers, {
+    fields: [savedEmbeds.createdBy],
+    references: [discordUsers.id],
+  }),
+}));
+
+// Insert schemas
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
+});
+
+export const insertDiscordServerSchema = createInsertSchema(discordServers).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDiscordUserSchema = createInsertSchema(discordUsers).omit({
+  createdAt: true,
+});
+
+export const insertServerMemberSchema = createInsertSchema(serverMembers).omit({
+  id: true,
+  joinedAt: true,
+});
+
+export const insertModerationLogSchema = createInsertSchema(moderationLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTicketSchema = createInsertSchema(tickets).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertGiveawaySchema = createInsertSchema(giveaways).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRoleReactionSchema = createInsertSchema(roleReactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertStreamNotificationSchema = createInsertSchema(streamNotifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSavedEmbedSchema = createInsertSchema(savedEmbeds).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
+export type InsertDiscordServer = z.infer<typeof insertDiscordServerSchema>;
+export type DiscordServer = typeof discordServers.$inferSelect;
+
+export type InsertDiscordUser = z.infer<typeof insertDiscordUserSchema>;
+export type DiscordUser = typeof discordUsers.$inferSelect;
+
+export type InsertServerMember = z.infer<typeof insertServerMemberSchema>;
+export type ServerMember = typeof serverMembers.$inferSelect;
+
+export type InsertModerationLog = z.infer<typeof insertModerationLogSchema>;
+export type ModerationLog = typeof moderationLogs.$inferSelect;
+
+export type InsertTicket = z.infer<typeof insertTicketSchema>;
+export type Ticket = typeof tickets.$inferSelect;
+
+export type InsertGiveaway = z.infer<typeof insertGiveawaySchema>;
+export type Giveaway = typeof giveaways.$inferSelect;
+
+export type InsertRoleReaction = z.infer<typeof insertRoleReactionSchema>;
+export type RoleReaction = typeof roleReactions.$inferSelect;
+
+export type InsertStreamNotification = z.infer<typeof insertStreamNotificationSchema>;
+export type StreamNotification = typeof streamNotifications.$inferSelect;
+
+export type InsertSavedEmbed = z.infer<typeof insertSavedEmbedSchema>;
+export type SavedEmbed = typeof savedEmbeds.$inferSelect;
