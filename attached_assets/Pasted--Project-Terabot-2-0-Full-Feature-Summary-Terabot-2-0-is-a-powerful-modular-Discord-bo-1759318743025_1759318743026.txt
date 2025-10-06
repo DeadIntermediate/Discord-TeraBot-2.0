@@ -1,0 +1,172 @@
+# 🤖 Project Terabot 2.0 – Full Feature Summary
+
+**Terabot 2.0** is a powerful, modular Discord bot built with **Python** and the `discord.py` library. It is designed for multi-guild support with robust moderation tools, giveaways, server insights, integration with Minecraft, and streamer-friendly features. It also supports dynamic role systems, stream alerts, and user engagement tools such as leveling, tickets, and TTS.
+
+---
+
+## 📌 Core Bot Functions
+
+### 🎉 1. Welcome & Leave System
+- Sends a **public embedded message** when a user joins or leaves:
+  - Includes: Username, avatar, and updated total member count.
+- Sends a **private embedded log** to a staff-only channel:
+  - Details include: Discord username, account creation date, member/bot distinction, and current guild stats.
+
+---
+
+### 🎁 2. Giveaway System
+- Role-locked to "Giveaway Manager" or similar.
+- Interactive setup using an **embed wizard**:
+  - Bot asks for prize, number of winners, time limit, entry method, role requirements.
+  - Preview with editable steps before launch.
+- When the giveaway ends:
+  - Attempts to **DM winner**.
+  - If DM fails, creates a **temporary private channel** to deliver reward.
+- Optional export of results:
+  - 📝 **HTML**, 📄 **CSV**, or 📑 **PDF**
+
+---
+
+### 📢 3. Stream Notification System
+- Supports:
+  - ✅ **Twitch**
+  - ✅ **YouTube**
+  - ✅ **Kick**
+- Sends an **auto-updating embed** on stream start with:
+  - Live status (✅/❌), username, avatar, clickable link, stream title, and current viewer count.
+- Setup via command:
+  - `/stream add [platform] [username]`
+- Optional self-setup if users connect streaming accounts to their Discord profiles.
+
+---
+
+### 🎟️ 4. Ticket System
+- Create tickets via message reaction or `/ticket open`
+- Bot creates a **temporary text channel** (staff + user only).
+- Includes:
+  - Ticket ID, timestamps, Discord ID.
+- Closure:
+  - User or staff can close.
+  - Bot archives the full ticket to:
+    - `.html`
+    - `.csv`
+    - `.pdf`
+- Optional **feedback prompt** after ticket closes.
+
+---
+
+### 🖥️ 5. Minecraft Server Status Integration
+- Auto-updating **single embedded message** showing:
+  - Server status (online/offline)
+  - Player count (`online/max`)
+  - Optional: Server MOTD or ping stats
+- Updates every X minutes.
+
+---
+
+### 🎭 6. Role Reaction System
+- Supports both:
+  - 🎉 **Emoji-based** reaction roles
+  - 🧾 **Dropdown menu** (select menu) roles
+- Configurable per-server:
+  - One-role-per-category limits
+  - Description and emoji per role
+  - Admin-defined categories and default roles
+
+---
+
+### 🛠️ 7. Slash Command System
+- `/help`: Shows only the commands the user has permission to use, each with descriptions.
+- `/serverinfo`: Outputs server:
+  - Name, ID, creation date, owner, member/bot count
+  - **Uptime** and **last restart time**
+- Future commands will follow this format:
+  - Embed-based setup wizard
+  - Edit button at the end to revise fields before submitting
+
+---
+
+### 📈 8. Leveling System (Triple-Track)
+1. **Text XP** – Based on message activity
+2. **Voice XP** – Based on time in voice channels
+3. **Global Level** – Combined score of text + voice
+
+Includes:
+- Role rewards per level
+- Leaderboards (`/top`, `/voicetop`, etc.)
+- Rank card with progress bar
+
+---
+
+### 🔊 9. Text-to-Speech (TTS) Feature
+- `/tts on` → Bot reads user’s typed messages aloud in VC
+- `/tts off` → Stops TTS for that user
+- Auto-turns off if:
+  - User leaves VC
+  - Bot is muted
+
+---
+
+### 🌐 10. Social Media Sync (Feeds)
+- Automatically posts updates from:
+  - 📸 **Instagram**
+  - 🟦 **BlueSky**
+  - 🐦 **X (Twitter)**
+- Bot posts new content (image/video/text) as embeds in a specified channel.
+- Includes:
+  - Author handle, description, image/video, clickable link, timestamp
+
+---
+
+### 🕹️ 11. Epic Games Weekly Giveaway Tracker
+- Auto-fetches weekly free game(s) from Epic Games Store.
+- Posts as an embed in a configured channel with:
+  - Game title, image, claim deadline, direct link
+- Enable/disable per guild.
+
+---
+
+## 👑 Owner & Admin Tools
+
+### 📊 12. Admin Dashboard (Web Optional)
+- Built using **Discord OAuth2**
+- Permissions:
+  - Guild owners only see and manage their own servers
+  - **Josh** (bot owner) sees **everything**
+- Analytics:
+  - Total servers connected
+  - Total commands executed
+  - Top used commands
+  - Growth stats over time (optional graphing)
+
+---
+
+## 💾 Database and Scale
+
+- Supported engines:
+  - ✅ MariaDB
+  - ✅ MySQL
+  - ✅ SQLite (for dev/testing)
+- Stores:
+  - Tickets, settings, user levels, XP, giveaways, stream info, logging
+- Scales to **50,000+ users across multiple guilds**
+- Permissions, settings, and logs are all per-guild scoped
+
+---
+
+## 🧱 Technical Stack
+
+| Component      | Tool/Lib              |
+|----------------|-----------------------|
+| Language       | Python 3.10+          |
+| Library        | `discord.py` or `py-cord` |
+| Database       | MariaDB / MySQL / SQLite |
+| Web Dashboard  | Flask + Jinja2 (optional) |
+| Auth System    | Discord OAuth2        |
+| Scheduler      | `discord.ext.tasks` or `apscheduler` |
+| Voice Features | `discord.py[voice]` or TTS API |
+
+---
+
+## 📁 Suggested Folder Layout
+
