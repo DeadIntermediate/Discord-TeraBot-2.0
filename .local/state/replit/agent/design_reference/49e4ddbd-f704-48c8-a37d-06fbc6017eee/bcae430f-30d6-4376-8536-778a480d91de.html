@@ -1,0 +1,641 @@
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Bot - Community Management & Moderation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    borderRadius: {
+                        lg: "var(--radius)",
+                        md: "calc(var(--radius) - 2px)",
+                        sm: "calc(var(--radius) - 4px)",
+                    },
+                    colors: {
+                        background: "var(--background)",
+                        foreground: "var(--foreground)",
+                        card: {
+                            DEFAULT: "var(--card)",
+                            foreground: "var(--card-foreground)",
+                        },
+                        popover: {
+                            DEFAULT: "var(--popover)",
+                            foreground: "var(--popover-foreground)",
+                        },
+                        primary: {
+                            DEFAULT: "var(--primary)",
+                            foreground: "var(--primary-foreground)",
+                        },
+                        secondary: {
+                            DEFAULT: "var(--secondary)",
+                            foreground: "var(--secondary-foreground)",
+                        },
+                        muted: {
+                            DEFAULT: "var(--muted)",
+                            foreground: "var(--muted-foreground)",
+                        },
+                        accent: {
+                            DEFAULT: "var(--accent)",
+                            foreground: "var(--accent-foreground)",
+                        },
+                        destructive: {
+                            DEFAULT: "var(--destructive)",
+                            foreground: "var(--destructive-foreground)",
+                        },
+                        border: "var(--border)",
+                        input: "var(--input)",
+                        ring: "var(--ring)",
+                    },
+                    fontFamily: {
+                        sans: ["var(--font-sans)"],
+                    }
+                },
+            }
+        };
+    </script>
+    <style>
+        :root {
+            --background: hsl(220 13% 18%);
+            --foreground: hsl(220 9% 86%);
+            --card: hsl(220 13% 21%);
+            --card-foreground: hsl(220 9% 86%);
+            --popover: hsl(220 13% 21%);
+            --popover-foreground: hsl(220 9% 86%);
+            --primary: hsl(235 86% 65%);
+            --primary-foreground: hsl(0 0% 98%);
+            --secondary: hsl(220 13% 26%);
+            --secondary-foreground: hsl(220 9% 86%);
+            --muted: hsl(220 13% 26%);
+            --muted-foreground: hsl(220 9% 60%);
+            --accent: hsl(142 71% 45%);
+            --accent-foreground: hsl(0 0% 98%);
+            --destructive: hsl(0 84% 60%);
+            --destructive-foreground: hsl(0 0% 98%);
+            --border: hsl(220 13% 26%);
+            --input: hsl(220 13% 26%);
+            --ring: hsl(235 86% 65%);
+            --radius: 8px;
+            --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-background text-foreground font-sans antialiased">
+    <!-- Navigation -->
+    <nav class="bg-card border-b border-border sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                            <i class="fas fa-robot text-primary-foreground"></i>
+                        </div>
+                        <span class="text-xl font-bold">BotMaster</span>
+                    </div>
+                </div>
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="#features" class="text-muted-foreground hover:text-foreground transition-colors">Features</a>
+                    <a href="#dashboard" class="text-muted-foreground hover:text-foreground transition-colors">Dashboard</a>
+                    <a href="#pricing" class="text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
+                    <button class="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90 transition-opacity">
+                        Add to Discord
+                    </button>
+                </div>
+                <button class="md:hidden text-foreground">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="py-20 px-4">
+        <div class="max-w-7xl mx-auto text-center">
+            <div class="mb-8">
+                <span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
+                    <i class="fas fa-sparkles mr-1"></i>
+                    Now with Advanced Moderation
+                </span>
+            </div>
+            <h1 class="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent">
+                Complete Discord<br />Community Management
+            </h1>
+            <p class="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
+                Everything you need to manage your Discord server: moderation tools, leveling systems, 
+                giveaways, music, and more. Built for communities of all sizes.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button class="bg-primary text-primary-foreground px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                    <i class="fab fa-discord mr-2"></i>
+                    Add to Server
+                </button>
+                <button class="bg-secondary text-secondary-foreground px-8 py-3 rounded-lg font-semibold hover:bg-secondary/80 transition-colors">
+                    <i class="fas fa-play mr-2"></i>
+                    View Demo
+                </button>
+            </div>
+            <div class="mt-12 flex justify-center items-center space-x-8 text-muted-foreground">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-foreground">150K+</div>
+                    <div class="text-sm">Servers</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-foreground">5M+</div>
+                    <div class="text-sm">Users</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-foreground">99.9%</div>
+                    <div class="text-sm">Uptime</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 px-4 bg-card/30">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">Powerful Features for Every Community</h2>
+                <p class="text-xl text-muted-foreground">From small friend groups to massive gaming communities</p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Welcome Messages -->
+                <div class="bg-card p-6 rounded-xl border border-border hover:border-primary/50 transition-colors group">
+                    <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                        <i class="fas fa-hand-wave text-primary text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Welcome Messages</h3>
+                    <p class="text-muted-foreground">Send beautiful embedded welcome messages to new members with custom greetings and server information.</p>
+                </div>
+
+                <!-- Moderation Tools -->
+                <div class="bg-card p-6 rounded-xl border border-border hover:border-primary/50 transition-colors group">
+                    <div class="w-12 h-12 bg-destructive/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-destructive/20 transition-colors">
+                        <i class="fas fa-shield-halved text-destructive text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Moderation Suite</h3>
+                    <p class="text-muted-foreground">Complete moderation tools including kick, ban, mute, message clearing, and jail system for problematic users.</p>
+                </div>
+
+                <!-- Leveling System -->
+                <div class="bg-card p-6 rounded-xl border border-border hover:border-primary/50 transition-colors group">
+                    <div class="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
+                        <i class="fas fa-trophy text-accent text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Leveling System</h3>
+                    <p class="text-muted-foreground">Reward active members with XP and levels for both text and voice activity to encourage engagement.</p>
+                </div>
+
+                <!-- Giveaways -->
+                <div class="bg-card p-6 rounded-xl border border-border hover:border-primary/50 transition-colors group">
+                    <div class="w-12 h-12 bg-yellow-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-yellow-500/20 transition-colors">
+                        <i class="fas fa-gift text-yellow-500 text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Giveaway System</h3>
+                    <p class="text-muted-foreground">Host engaging giveaways with automatic entry management and winner selection for prizes and rewards.</p>
+                </div>
+
+                <!-- Ticket System -->
+                <div class="bg-card p-6 rounded-xl border border-border hover:border-primary/50 transition-colors group">
+                    <div class="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition-colors">
+                        <i class="fas fa-ticket text-blue-500 text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Support Tickets</h3>
+                    <p class="text-muted-foreground">Built-in ticketing system for handling support requests and user questions with moderator management.</p>
+                </div>
+
+                <!-- Role Reactions -->
+                <div class="bg-card p-6 rounded-xl border border-border hover:border-primary/50 transition-colors group">
+                    <div class="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-500/20 transition-colors">
+                        <i class="fas fa-mouse-pointer text-purple-500 text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Role Reactions</h3>
+                    <p class="text-muted-foreground">Enable users to self-assign roles by reacting to messages, making role management interactive and easy.</p>
+                </div>
+            </div>
+
+            <!-- Additional Features Grid -->
+            <div class="mt-12 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-card/50 p-4 rounded-lg border border-border">
+                    <i class="fas fa-music text-primary mb-2"></i>
+                    <h4 class="font-semibold mb-1">Music Bot</h4>
+                    <p class="text-sm text-muted-foreground">Play, pause, skip music in voice channels</p>
+                </div>
+                <div class="bg-card/50 p-4 rounded-lg border border-border">
+                    <i class="fas fa-broadcast-tower text-primary mb-2"></i>
+                    <h4 class="font-semibold mb-1">Stream Alerts</h4>
+                    <p class="text-sm text-muted-foreground">Auto-announce when users go live</p>
+                </div>
+                <div class="bg-card/50 p-4 rounded-lg border border-border">
+                    <i class="fas fa-server text-primary mb-2"></i>
+                    <h4 class="font-semibold mb-1">Server Status</h4>
+                    <p class="text-sm text-muted-foreground">Monitor Minecraft server status</p>
+                </div>
+                <div class="bg-card/50 p-4 rounded-lg border border-border">
+                    <i class="fas fa-chart-line text-primary mb-2"></i>
+                    <h4 class="font-semibold mb-1">Analytics</h4>
+                    <p class="text-sm text-muted-foreground">Track server growth and engagement</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dashboard Preview -->
+    <section id="dashboard" class="py-20 px-4">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">Intuitive Management Dashboard</h2>
+                <p class="text-xl text-muted-foreground">Configure everything from one central location</p>
+            </div>
+
+            <div class="bg-card rounded-2xl border border-border overflow-hidden shadow-2xl">
+                <!-- Dashboard Header -->
+                <div class="bg-secondary/50 p-6 border-b border-border">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                                <i class="fas fa-robot text-primary-foreground"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold">My Gaming Server</h3>
+                                <p class="text-sm text-muted-foreground">2,847 members • Online</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="bg-accent/10 text-accent px-2 py-1 rounded text-sm">
+                                <i class="fas fa-circle text-xs mr-1"></i>
+                                Connected
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex">
+                    <!-- Sidebar -->
+                    <div class="w-64 bg-secondary/30 p-4">
+                        <nav class="space-y-2">
+                            <a href="#" class="flex items-center space-x-3 bg-primary/10 text-primary px-3 py-2 rounded-lg">
+                                <i class="fas fa-chart-pie"></i>
+                                <span>Dashboard</span>
+                            </a>
+                            <a href="#" class="flex items-center space-x-3 text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg hover:bg-secondary/50 transition-colors">
+                                <i class="fas fa-shield-halved"></i>
+                                <span>Moderation</span>
+                            </a>
+                            <a href="#" class="flex items-center space-x-3 text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg hover:bg-secondary/50 transition-colors">
+                                <i class="fas fa-hand-wave"></i>
+                                <span>Welcome</span>
+                            </a>
+                            <a href="#" class="flex items-center space-x-3 text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg hover:bg-secondary/50 transition-colors">
+                                <i class="fas fa-trophy"></i>
+                                <span>Leveling</span>
+                            </a>
+                            <a href="#" class="flex items-center space-x-3 text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg hover:bg-secondary/50 transition-colors">
+                                <i class="fas fa-gift"></i>
+                                <span>Giveaways</span>
+                            </a>
+                            <a href="#" class="flex items-center space-x-3 text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg hover:bg-secondary/50 transition-colors">
+                                <i class="fas fa-ticket"></i>
+                                <span>Tickets</span>
+                            </a>
+                            <a href="#" class="flex items-center space-x-3 text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg hover:bg-secondary/50 transition-colors">
+                                <i class="fas fa-cog"></i>
+                                <span>Settings</span>
+                            </a>
+                        </nav>
+                    </div>
+
+                    <!-- Main Content -->
+                    <div class="flex-1 p-6">
+                        <!-- Stats Cards -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                            <div class="bg-card p-4 rounded-lg border border-border">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Total Members</p>
+                                        <p class="text-2xl font-bold">2,847</p>
+                                    </div>
+                                    <i class="fas fa-users text-primary text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="bg-card p-4 rounded-lg border border-border">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Active Tickets</p>
+                                        <p class="text-2xl font-bold">12</p>
+                                    </div>
+                                    <i class="fas fa-ticket text-blue-500 text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="bg-card p-4 rounded-lg border border-border">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Mod Actions</p>
+                                        <p class="text-2xl font-bold">47</p>
+                                    </div>
+                                    <i class="fas fa-gavel text-destructive text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="bg-card p-4 rounded-lg border border-border">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Commands/Day</p>
+                                        <p class="text-2xl font-bold">1,234</p>
+                                    </div>
+                                    <i class="fas fa-terminal text-accent text-2xl"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity -->
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="bg-card p-6 rounded-lg border border-border">
+                                <h4 class="font-semibold mb-4">Recent Moderation</h4>
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-8 h-8 bg-destructive/20 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-ban text-destructive text-xs"></i>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium">User banned</p>
+                                                <p class="text-sm text-muted-foreground">SpamBot#1234</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs text-muted-foreground">2m ago</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-8 h-8 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-volume-mute text-yellow-500 text-xs"></i>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium">User muted</p>
+                                                <p class="text-sm text-muted-foreground">ToxicPlayer#5678</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs text-muted-foreground">15m ago</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-card p-6 rounded-lg border border-border">
+                                <h4 class="font-semibold mb-4">Active Giveaways</h4>
+                                <div class="space-y-3">
+                                    <div class="p-3 bg-secondary/30 rounded-lg">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <p class="font-medium">$50 Steam Gift Card</p>
+                                            <span class="text-xs bg-accent/20 text-accent px-2 py-1 rounded">Active</span>
+                                        </div>
+                                        <div class="flex justify-between text-sm text-muted-foreground">
+                                            <span>234 entries</span>
+                                            <span>Ends in 2d 4h</span>
+                                        </div>
+                                    </div>
+                                    <div class="p-3 bg-secondary/30 rounded-lg">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <p class="font-medium">Game Key Bundle</p>
+                                            <span class="text-xs bg-primary/20 text-primary px-2 py-1 rounded">Ending Soon</span>
+                                        </div>
+                                        <div class="flex justify-between text-sm text-muted-foreground">
+                                            <span>156 entries</span>
+                                            <span>Ends in 4h</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Discord Embed Preview -->
+    <section class="py-20 px-4 bg-card/30">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">Beautiful Discord Integration</h2>
+                <p class="text-xl text-muted-foreground">See how your messages will look in Discord</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Welcome Message Example -->
+                <div class="bg-[#36393f] p-4 rounded-lg">
+                    <div class="text-xs text-[#72767d] mb-2">Today at 2:47 PM</div>
+                    <div class="flex items-start space-x-3">
+                        <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                            <i class="fas fa-robot text-primary-foreground"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <span class="text-white font-semibold">BotMaster</span>
+                                <span class="bg-primary text-xs px-1 rounded text-white">BOT</span>
+                            </div>
+                            <div class="bg-[#2f3136] border-l-4 border-primary p-4 rounded">
+                                <div class="text-white font-semibold mb-2">👋 Welcome to the Server!</div>
+                                <div class="text-[#dcddde] text-sm mb-3">
+                                    Hey <span class="text-primary">@NewUser</span>! Welcome to our amazing community. 
+                                    We're excited to have you here!
+                                </div>
+                                <div class="text-xs text-[#72767d]">
+                                    <div>📋 Check out #rules for server guidelines</div>
+                                    <div>💬 Introduce yourself in #introductions</div>
+                                    <div>🎮 Join us for games in voice channels!</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Giveaway Example -->
+                <div class="bg-[#36393f] p-4 rounded-lg">
+                    <div class="text-xs text-[#72767d] mb-2">Today at 3:15 PM</div>
+                    <div class="flex items-start space-x-3">
+                        <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                            <i class="fas fa-robot text-primary-foreground"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <span class="text-white font-semibold">BotMaster</span>
+                                <span class="bg-primary text-xs px-1 rounded text-white">BOT</span>
+                            </div>
+                            <div class="bg-[#2f3136] border-l-4 border-yellow-500 p-4 rounded">
+                                <div class="text-white font-semibold mb-2">🎉 GIVEAWAY TIME!</div>
+                                <div class="text-[#dcddde] text-sm mb-3">
+                                    We're giving away a <span class="font-semibold">$50 Steam Gift Card</span>!
+                                </div>
+                                <div class="text-xs text-[#72767d] mb-3">
+                                    <div>⏰ Ends: Tomorrow at 6:00 PM</div>
+                                    <div>👥 Entries: 234</div>
+                                </div>
+                                <div class="text-xs text-[#dcddde]">
+                                    React with 🎁 to enter!
+                                </div>
+                            </div>
+                            <div class="flex items-center mt-2 space-x-2">
+                                <span class="text-lg">🎁</span>
+                                <span class="text-xs text-[#72767d]">234</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Server Info Example -->
+                <div class="bg-[#36393f] p-4 rounded-lg">
+                    <div class="text-xs text-[#72767d] mb-2">Today at 4:22 PM</div>
+                    <div class="flex items-start space-x-3">
+                        <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                            <i class="fas fa-robot text-primary-foreground"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <span class="text-white font-semibold">BotMaster</span>
+                                <span class="bg-primary text-xs px-1 rounded text-white">BOT</span>
+                            </div>
+                            <div class="bg-[#2f3136] border-l-4 border-accent p-4 rounded">
+                                <div class="text-white font-semibold mb-2">📊 Server Information</div>
+                                <div class="text-xs text-[#dcddde] space-y-1">
+                                    <div><span class="text-[#72767d]">Name:</span> My Gaming Server</div>
+                                    <div><span class="text-[#72767d]">Members:</span> 2,847 (2,234 humans, 613 bots)</div>
+                                    <div><span class="text-[#72767d]">Created:</span> March 15, 2022</div>
+                                    <div><span class="text-[#72767d]">Owner:</span> ServerOwner#1234</div>
+                                    <div><span class="text-[#72767d]">Channels:</span> 24 text, 8 voice</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-20 px-4">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-4xl font-bold mb-4">Ready to Transform Your Discord Server?</h2>
+            <p class="text-xl text-muted-foreground mb-8">
+                Join thousands of communities already using BotMaster to create engaging, well-moderated Discord servers.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button class="bg-primary text-primary-foreground px-8 py-4 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity">
+                    <i class="fab fa-discord mr-2"></i>
+                    Add to Discord - Free
+                </button>
+                <button class="bg-secondary text-secondary-foreground px-8 py-4 rounded-lg font-semibold text-lg hover:bg-secondary/80 transition-colors">
+                    <i class="fas fa-book mr-2"></i>
+                    Read Documentation
+                </button>
+            </div>
+            <p class="text-sm text-muted-foreground mt-4">
+                No credit card required • Setup in under 5 minutes • 24/7 support
+            </p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-card border-t border-border py-12 px-4">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-4">
+                        <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                            <i class="fas fa-robot text-primary-foreground"></i>
+                        </div>
+                        <span class="text-xl font-bold">BotMaster</span>
+                    </div>
+                    <p class="text-muted-foreground text-sm">
+                        The complete Discord bot solution for community management and engagement.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Features</h4>
+                    <ul class="space-y-2 text-sm text-muted-foreground">
+                        <li><a href="#" class="hover:text-foreground transition-colors">Moderation Tools</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Leveling System</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Giveaways</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Music Bot</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Support</h4>
+                    <ul class="space-y-2 text-sm text-muted-foreground">
+                        <li><a href="#" class="hover:text-foreground transition-colors">Documentation</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Discord Server</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Status Page</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Legal</h4>
+                    <ul class="space-y-2 text-sm text-muted-foreground">
+                        <li><a href="#" class="hover:text-foreground transition-colors">Privacy Policy</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">Terms of Service</a></li>
+                        <li><a href="#" class="hover:text-foreground transition-colors">GDPR</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-border mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-sm text-muted-foreground">
+                    © 2024 BotMaster. All rights reserved.
+                </p>
+                <div class="flex items-center space-x-4 mt-4 md:mt-0">
+                    <a href="#" class="text-muted-foreground hover:text-primary transition-colors">
+                        <i class="fab fa-discord"></i>
+                    </a>
+                    <a href="#" class="text-muted-foreground hover:text-primary transition-colors">
+                        <i class="fab fa-github"></i>
+                    </a>
+                    <a href="#" class="text-muted-foreground hover:text-primary transition-colors">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Simple scroll behavior for navigation
+        (function() {
+            const links = document.querySelectorAll('a[href^="#"]');
+            
+            links.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+
+            // Add mobile menu toggle functionality
+            const mobileMenuToggle = document.querySelector('.md\\:hidden button');
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    // TODO: Implement mobile menu toggle functionality
+                    console.log('Mobile menu toggle clicked');
+                });
+            }
+
+            // Add button click handlers
+            const addToDiscordButtons = document.querySelectorAll('button:contains("Add to Discord"), button:contains("Add to Server")');
+            addToDiscordButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // TODO: Implement Discord OAuth flow
+                    console.log('Add to Discord clicked');
+                });
+            });
+        })();
+    </script>
+</body>
+</html>
