@@ -18,11 +18,15 @@ if [ ! -d node_modules ]; then
     npm install
 fi
 
-# Check if Python virtual environment exists
-if [ -d venv ]; then
-    echo "Activating Python virtual environment..."
-    source venv/bin/activate
+# Create Python virtual environment if it doesn't exist
+if [ ! -d venv ]; then
+    echo "Creating Python virtual environment..."
+    python3 -m venv venv
 fi
+
+# Activate Python virtual environment
+echo "Activating Python virtual environment..."
+source venv/bin/activate
 
 # Check if Python dependencies are installed
 if ! python3 -c "import discord" 2>/dev/null; then
