@@ -34,6 +34,10 @@ if ! python3 -c "import discord" 2>/dev/null; then
     pip install -r python_requirements.txt
 fi
 
+# Load environment variables from .env
+echo "Loading environment variables..."
+export $(cat .env | grep -v '^#' | xargs)
+
 # Start the application
 echo "Starting application on port 5000..."
 npm run dev
