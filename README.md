@@ -3,7 +3,7 @@
 ### Created by Josh — Terabyte Gaming Network (TGN)
 
 TeraBot 2.0 is a custom-built **Discord bot** designed for the **Terabyte Gaming Network**, a large-scale multi-server Minecraft network.  
-This project is being rewritten from **Python (Discord.py)** to **Node.js (Discord.js)** for better scalability, modularity, and ecosystem support.
+Built with **Node.js (Discord.js)** for optimal scalability, modularity, and ecosystem support.
 
 ---
 

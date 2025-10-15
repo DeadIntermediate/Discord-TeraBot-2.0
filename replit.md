@@ -1,6 +1,6 @@
 # Overview
 
-This is a comprehensive Discord bot application designed for community management and engagement. The bot provides a wide range of features including moderation tools, welcome messages, leveling systems, giveaways, ticketing, and more. The application consists of a Python Discord bot backend integrated with a TypeScript/React web dashboard for server configuration and management.
+This is a comprehensive Discord bot application designed for community management and engagement. The bot provides a wide range of features including moderation tools, welcome messages, giveaways, ticketing, and more. The application is built entirely with **Node.js** using **Discord.js v14**, integrated with a TypeScript/React web dashboard for server configuration and management.
 
 # Recent Changes (October 4, 2025)
 
@@ -56,14 +56,14 @@ This is a comprehensive Discord bot application designed for community managemen
   - Private staff logs showing account age, bot/user status, and guild statistics
   - `/setupwelcomelog` command to configure staff log channel
 - **Ticket System Close Button**: Persistent "Close Ticket" button for easier ticket management
-- **Converted Discord Bot to Python**: Migrated from TypeScript/JavaScript to Python using Discord.py with cogs-based architecture
-- **Implemented Cogs System**: Organized bot functionality into 10 separate cogs (moderation, utility, events, leveling, giveaways, role_reactions, tickets, streams, anti_invite, embeds)
-- **Verified Functionality**: All 10 cogs load successfully, 35 slash commands synced to Discord
+- **Converted to Node.js**: Migrated from Python to Node.js using Discord.js v14 with modular command structure
+- **Implemented Modular Commands**: Organized bot functionality into separate command modules (moderation, utility, giveaways, role reactions, tickets, embeds)
+- **Verified Functionality**: All command modules load successfully, slash commands synced to Discord
 
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
-Bot implementation preference: Python with Discord.py using cogs system
+Bot implementation preference: Node.js with Discord.js using modular command structure
 
 # System Architecture
 
@@ -76,19 +76,19 @@ Bot implementation preference: Python with Discord.py using cogs system
 - **Design System**: Component-based architecture with reusable UI components and a dark theme
 
 ## Backend Architecture
+- **Bot Runtime**: Node.js with TypeScript
+- **Bot Framework**: Discord.js v14 for Discord API interactions
 - **Web Server Runtime**: Node.js with TypeScript
 - **Framework**: Express.js for HTTP server and REST API (serves on port 5000)
-- **Discord Bot Runtime**: Python 3.x with Discord.py library
-- **Bot Architecture**: Cogs-based modular design for feature organization
 - **Bot Control System**: Centralized bot controller managing bot process lifecycle (start/stop/restart)
-- **Database ORM**: Drizzle ORM (Node.js) and asyncpg (Python) for database operations
+- **Database ORM**: Drizzle ORM for database operations
 - **API Design**: RESTful endpoints for CRUD operations on Discord servers, members, moderation logs, tickets, giveaways, and bot control
   - `/api/bot/status` - Get current bot status
   - `/api/bot/start` - Start the Discord bot
   - `/api/bot/stop` - Stop the Discord bot
   - `/api/bot/restart` - Restart the Discord bot
 - **Real-time Communication**: WebSocket support for live updates
-- **Process Management**: Bot controller manages Python bot as child process with unbuffered output
+- **Process Management**: Bot controller manages Discord bot as integrated process
 
 ## Database Schema
 - **Users**: Basic user authentication and management
@@ -103,35 +103,26 @@ Bot implementation preference: Python with Discord.py using cogs system
 - **Saved Embeds**: Reusable embed templates with JSON data storage
 
 ## Discord Bot Features
-- **Moderation Commands**: Kick, ban, and other moderation actions with logging
-- **Anti-Invite System**: Automatic detection and removal of Discord invite links for external servers
-  - Configurable per-server enable/disable
-  - Bypass roles for staff who can post external invites
-  - DM notifications and optional moderation logging
-  - Handles invalid/expired invites safely
+- **Moderation Commands**: Kick, ban, timeout, jail, unjail, warn, modhistory with comprehensive logging
 - **Utility Commands**: Server information and member details
   - `/memberinfo` for staff to view comprehensive member information
+  - `/ping` for bot latency check
+  - `/serverinfo` for guild statistics
 - **Event Handlers**: 
-  - Public welcome messages for new members
-  - Private staff log channel with detailed member join/leave information (account age, bot/user status, guild stats)
+  - Customizable welcome messages for new members with embeds
+  - Customizable leave messages with embeds
   - Member join/leave tracking in database
-- **Ticket System**: Create, manage, and close support tickets with persistent button interface
-- **Triple-Track Leveling System**: Comprehensive XP tracking system
-  - Text XP from messages (5 XP per message)
-  - Voice XP from voice channel time (10 XP per minute)
-  - Global level combining both XP types
-  - Three leaderboard commands for separate rankings
-  - Automatic member initialization on first activity
-- **Stream Notifications**: Multi-platform live stream alerts for Twitch, YouTube, and Kick
+  - Button interaction handlers for tickets and other features
+  - Modal submission handlers for embed builder
+- **Ticket System**: Create, manage, close, assign, and list support tickets with interactive button/modal interface
+- **Giveaway System**: Create, end, list, and reroll giveaways with requirement checking (roles, account age)
+- **Role Reactions**: Self-assignable roles via message reactions with template support
 - **Interactive Embed Builder**: Complete embed creation system
   - Interactive modal builder with color support (hex codes or color names)
-  - JSON-based embed creation for advanced users
   - Save and reuse embed templates across the server
-  - List, use, and delete saved embeds
-- **Giveaway System**: Create and manage server giveaways
-- **Role Reactions**: Self-assignable roles via message reactions
-- **Slash Commands**: Modern Discord interaction system with 35 commands
-- **Auto-moderation**: Configurable moderation rules and actions
+  - List and manage saved embeds
+- **Slash Commands**: Modern Discord interaction system with comprehensive command coverage
+- **Database Integration**: All features backed by PostgreSQL for persistent data storage
 
 ## Development Environment
 - **Monorepo Structure**: Shared schema and types between frontend and backend

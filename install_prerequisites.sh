@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Discord Bot Prerequisites Installation Script for Raspberry Pi 5
-# This script installs Node.js, Python, and PostgreSQL
+# Discord Bot Prerequisites Installation Script
+# This script installs Node.js and PostgreSQL for TeraBot 2.0
 
 set -e  # Exit on any error
 
 echo "=========================================="
-echo "Discord Bot Prerequisites Installer"
-echo "For Raspberry Pi 5"
+echo "TeraBot 2.0 Prerequisites Installer"
+echo "Node.js Discord Bot"
 echo "=========================================="
 echo ""
 
@@ -30,7 +30,7 @@ sudo apt upgrade -y
 echo -e "${GREEN}✓ System updated${NC}"
 echo ""
 
-echo -e "${YELLOW}Step 2: Installing Node.js 20.x...${NC}"
+echo -e "${YELLOW}Step 2: Installing Node.js 20.x (LTS)...${NC}"
 if command -v node &> /dev/null; then
     NODE_VERSION=$(node --version)
     echo "Node.js is already installed: $NODE_VERSION"
@@ -59,23 +59,8 @@ else
 fi
 echo ""
 
-echo -e "${YELLOW}Step 3: Installing Python 3 and pip...${NC}"
-sudo apt install -y python3 python3-pip python3-venv python3-dev
-
-# Verify Python installation
-if command -v python3 &> /dev/null; then
-    PYTHON_VERSION=$(python3 --version)
-    PIP_VERSION=$(pip3 --version)
-    echo -e "${GREEN}✓ Python installed: $PYTHON_VERSION${NC}"
-    echo -e "${GREEN}✓ pip installed: $PIP_VERSION${NC}"
-else
-    echo -e "${RED}✗ Python installation failed${NC}"
-    exit 1
-fi
-echo ""
-
-echo -e "${YELLOW}Step 4: PostgreSQL Database Setup${NC}"
-echo "Do you want to install PostgreSQL locally on this Pi?"
+echo -e "${YELLOW}Step 3: PostgreSQL Database Setup${NC}"
+echo "Do you want to install PostgreSQL locally?"
 echo "(If you're using Neon cloud database, you can skip this)"
 read -p "Install PostgreSQL? (y/n) " -n 1 -r
 echo
@@ -120,13 +105,13 @@ else
 fi
 echo ""
 
-echo -e "${YELLOW}Step 5: Installing additional dependencies...${NC}"
+echo -e "${YELLOW}Step 4: Installing additional dependencies...${NC}"
 sudo apt install -y build-essential git curl wget
 
 echo -e "${GREEN}✓ Build tools installed${NC}"
 echo ""
 
-echo -e "${YELLOW}Step 6: Optimizing for Raspberry Pi...${NC}"
+echo -e "${YELLOW}Step 5: System optimization...${NC}"
 
 # Increase swap space for better performance
 CURRENT_SWAP=$(free -m | awk '/Swap:/ {print $2}')
@@ -150,8 +135,6 @@ echo ""
 echo "Installed components:"
 echo "✓ Node.js: $(node --version)"
 echo "✓ npm: $(npm --version)"
-echo "✓ Python: $(python3 --version)"
-echo "✓ pip: $(pip3 --version)"
 
 if command -v psql &> /dev/null; then
     echo "✓ PostgreSQL: $(psql --version | head -n 1)"
@@ -159,10 +142,11 @@ fi
 
 echo ""
 echo "Next steps:"
-echo "1. Extract your discord-bot.tar.gz file"
-echo "2. Navigate to the bot directory"
-echo "3. Configure your .env file with Discord token and database URL"
-echo "4. Run: ./start_bot.sh"
+echo "1. Navigate to your bot directory"
+echo "2. Copy .env.example to .env and configure your settings"
+echo "3. Install Node dependencies: npm install"
+echo "4. Run database migrations: npm run db:push"
+echo "5. Start the bot: npm run dev (or ./start_bot.sh)"
 echo ""
 echo "For detailed instructions, see DEPLOYMENT.md"
 echo ""

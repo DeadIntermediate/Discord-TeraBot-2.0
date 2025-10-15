@@ -1,4 +1,4 @@
-# Download Instructions for Raspberry Pi Deployment
+# Download Instructions for Server Deployment
 
 ## Download the Bot Package
 
@@ -7,17 +7,16 @@ Your Discord bot has been packaged and is ready for download!
 ### File: `discord-bot.tar.gz`
 
 This archive contains:
-- ✅ All source code (Python bot + Node.js web dashboard)
+- ✅ All source code (Node.js Discord bot + Web dashboard)
 - ✅ Configuration files (package.json, tsconfig.json, etc.)
 - ✅ Deployment guide (DEPLOYMENT.md)
-- ✅ Python dependencies list (python_requirements.txt)
+- ✅ Node.js dependencies list (package.json)
 - ✅ Environment template (.env.example)
 - ✅ Startup script (start_bot.sh)
 - ✅ Systemd service template (systemd_service_template.txt)
 
-**Excluded** (you'll install these on your Pi):
+**Excluded** (you'll install these on your server):
 - node_modules (Node.js dependencies)
-- venv (Python virtual environment)
 - Cache and temporary files
 
 ## How to Download
@@ -39,23 +38,23 @@ This archive contains:
 
 ## File Size
 
-The compressed package is approximately **~500KB** (without node_modules and dependencies).
+The compressed package is approximately **~500KB** (without node_modules).
 
-After installing all dependencies on your Raspberry Pi, the full installation will be around **200-300 MB**.
+After installing all dependencies on your server, the full installation will be around **200-300 MB**.
 
 ## Next Steps
 
 Once you've downloaded the file:
 
-1. Transfer `discord-bot.tar.gz` to your Raspberry Pi using:
+1. Transfer `discord-bot.tar.gz` to your server using:
    - USB drive
-   - SCP/SFTP: `scp discord-bot.tar.gz pi@your-pi-ip:~/`
+   - SCP/SFTP: `scp discord-bot.tar.gz user@your-server-ip:~/`
    - Network share
 
-2. On your Raspberry Pi, extract the archive:
+2. On your server, extract the archive:
    ```bash
-   tar -xzf discord-bot.tar.gz -C ~/discord-bot
-   cd ~/discord-bot
+   tar -xzf discord-bot.tar.gz -C ~/Discord-TeraBot-2.0
+   cd ~/Discord-TeraBot-2.0
    ```
 
 3. Follow the complete setup guide in **DEPLOYMENT.md**
@@ -63,22 +62,21 @@ Once you've downloaded the file:
 ## What's Included
 
 ### Core Bot Files
-- `python_bot/` - Discord bot Python code with 10 cogs
+- `server/bot/` - Discord bot Node.js code with command modules
 - `server/` - Express.js backend with bot controller
 - `client/` - React web dashboard
 - `shared/` - Shared schema and types
 
 ### Configuration Files
 - `package.json` - Node.js dependencies
-- `python_requirements.txt` - Python dependencies
 - `.env.example` - Environment variable template
 - `tsconfig.json` - TypeScript configuration
 - `drizzle.config.ts` - Database configuration
 - `vite.config.ts` - Frontend build configuration
 
 ### Deployment Files
-- `DEPLOYMENT.md` - Complete Raspberry Pi setup guide
-- `install_prerequisites.sh` - **NEW!** Automated installer for Node.js, Python, PostgreSQL
+- `DEPLOYMENT.md` - Complete server setup guide
+- `install_prerequisites.sh` - Automated installer for Node.js and PostgreSQL
 - `start_bot.sh` - Automated startup script
 - `systemd_service_template.txt` - System service configuration
 
@@ -90,24 +88,29 @@ Once you've downloaded the file:
 
 ### Step 1: Install Prerequisites (One-Time Setup)
 ```bash
-cd ~/discord-bot
+cd ~/Discord-TeraBot-2.0
 chmod +x install_prerequisites.sh
 ./install_prerequisites.sh
 ```
 
 This automated installer will:
 1. Update your system
-2. Install Node.js 20.x
-3. Install Python 3 and pip
-4. Optionally install PostgreSQL locally
-5. Set up database with your credentials
-6. Optimize swap space for Raspberry Pi
+2. Install Node.js 20.x (LTS)
+3. Optionally install PostgreSQL locally
+4. Set up database with your credentials
+5. Optimize system settings
 
 ### Step 2: Configure and Start Bot
 ```bash
 # Copy environment template
 cp .env.example .env
 nano .env  # Add your Discord token and database URL
+
+# Install Node.js dependencies
+npm install
+
+# Run database migrations
+npm run db:push
 
 # Run the bot startup script
 chmod +x start_bot.sh
@@ -116,17 +119,16 @@ chmod +x start_bot.sh
 
 The startup script will:
 1. Check for .env configuration
-2. Install Node.js dependencies
-3. Set up Python virtual environment
-4. Install Python dependencies
-5. Start the bot and web dashboard
+2. Verify Node.js dependencies are installed
+3. Load environment variables
+4. Start the bot and web dashboard
 
 ## Important Notes
 
-⚠️ **Before running on your Pi:**
+⚠️ **Before running on your server:**
 1. You MUST configure `.env` with your Discord bot token
 2. You MUST have a PostgreSQL database (local or Neon cloud)
-3. Node.js 20+ and Python 3.8+ must be installed
+3. Node.js 20+ must be installed
 
 📖 **Read DEPLOYMENT.md** for complete step-by-step instructions!
 
@@ -135,19 +137,19 @@ The startup script will:
 If you encounter issues:
 1. Check `DEPLOYMENT.md` for troubleshooting section
 2. Verify all prerequisites are installed
-3. Check system logs: `sudo journalctl -u discord-bot -f`
+3. Check system logs: `sudo journalctl -u terabot -f`
 
 ## Bot Features Summary
 
-- 35 slash commands across 10 cogs
-- Triple-track leveling system (text/voice/global)
-- Moderation tools with logging
-- Support ticket system with buttons
-- Stream notifications (Twitch/YouTube/Kick)
-- Anti-invite system
-- Interactive embed builder
-- Web dashboard for bot control
-- Welcome system with staff logging
+Built with **Discord.js v14** and **Node.js**, featuring:
+- Moderation tools (kick, ban, timeout, jail, warn, modhistory)
+- Utility commands (ping, serverinfo, help, memberinfo)
+- Support ticket system with interactive buttons
+- Giveaway system with requirement checking
+- Welcome/leave messages with custom embeds
+- Role reaction system for self-assignable roles
+- Interactive embed builder with templates
+- Web dashboard for bot control and analytics
 - Giveaway management
 - Role reactions
 

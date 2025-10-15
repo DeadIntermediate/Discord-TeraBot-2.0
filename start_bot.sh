@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Discord Bot Startup Script for Raspberry Pi
-# This script starts both the Node.js web dashboard and Python Discord bot
+# Discord Bot Startup Script
+# This script starts the Node.js Discord bot with web dashboard
 
-echo "Starting Discord Bot with Web Dashboard..."
+echo "Starting TeraBot 2.0..."
 
 # Check if .env file exists
 if [ ! -f .env ]; then
@@ -16,22 +16,6 @@ fi
 if [ ! -d node_modules ]; then
     echo "Installing Node.js dependencies..."
     npm install
-fi
-
-# Create Python virtual environment if it doesn't exist
-if [ ! -d venv ]; then
-    echo "Creating Python virtual environment..."
-    python3 -m venv venv
-fi
-
-# Activate Python virtual environment
-echo "Activating Python virtual environment..."
-source venv/bin/activate
-
-# Check if Python dependencies are installed
-if ! python3 -c "import discord" 2>/dev/null; then
-    echo "Installing Python dependencies..."
-    pip install -r python_requirements.txt
 fi
 
 # Load environment variables from .env

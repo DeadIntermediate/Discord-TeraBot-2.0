@@ -1,24 +1,23 @@
-# Discord Bot Deployment Guide for Raspberry Pi 5
+# TeraBot 2.0 Deployment Guide
 
-This guide will help you deploy your comprehensive Discord bot on a Raspberry Pi 5.
+This guide will help you deploy TeraBot 2.0 (Node.js Discord bot) on your server or Raspberry Pi.
 
 ## Prerequisites
 
-- Raspberry Pi 5 with Raspberry Pi OS (64-bit recommended)
+- Server or Raspberry Pi with Linux (Debian-based recommended)
 - Internet connection
 - Discord Bot Token
-- PostgreSQL database (can use Neon cloud database or local PostgreSQL)
+- PostgreSQL database (Neon cloud database or local PostgreSQL)
 
 ## Quick Install (Automated)
 
 We've included an automated installer that sets up all prerequisites for you!
 
-### Step 1: Extract the Project
+### Step 1: Clone or Extract the Project
 
 ```bash
-mkdir ~/discord-bot
-tar -xzf discord-bot.tar.gz -C ~/discord-bot
-cd ~/discord-bot
+git clone https://github.com/DeadIntermediate/Discord-TeraBot-2.0.git
+cd Discord-TeraBot-2.0
 ```
 
 ### Step 2: Run Automated Installer
@@ -30,14 +29,13 @@ chmod +x install_prerequisites.sh
 
 The script will automatically:
 - ✅ Update your system
-- ✅ Install Node.js 20.x
-- ✅ Install Python 3 and pip
+- ✅ Install Node.js 20.x (LTS)
 - ✅ Optionally install PostgreSQL locally
 - ✅ Set up database with credentials you provide
-- ✅ Optimize swap space for Raspberry Pi
+- ✅ Optimize system settings
 - ✅ Install build tools
 
-**Then skip to Step 6 below!**
+**Then skip to Step 5 below!**
 
 ---
 
@@ -45,7 +43,7 @@ The script will automatically:
 
 If you prefer to install manually, follow these steps:
 
-### Step 1: Prepare Your Raspberry Pi
+### Step 1: Prepare Your System
 
 Update your system:
 ```bash
@@ -55,7 +53,7 @@ sudo apt upgrade -y
 
 ### Step 2: Install Node.js
 
-Install Node.js 20.x (required for the web dashboard):
+Install Node.js 20.x (LTS):
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
@@ -67,14 +65,7 @@ node --version
 npm --version
 ```
 
-### Step 3: Install Python 3 and Dependencies
-
-Install Python 3 and pip:
-```bash
-sudo apt install -y python3 python3-pip python3-venv
-```
-
-### Step 4: Install PostgreSQL (Optional - if not using Neon)
+### Step 3: Install PostgreSQL (Optional - if not using Neon)
 
 If you want to run PostgreSQL locally instead of using Neon:
 ```bash
@@ -92,34 +83,22 @@ GRANT ALL PRIVILEGES ON DATABASE discord_bot TO botuser;
 \q
 ```
 
-### Step 5: Extract and Setup Project
+### Step 4: Clone Project
 
-Extract the downloaded zip file:
+Clone the repository:
 ```bash
-unzip discord-bot.zip
-cd discord-bot
+git clone https://github.com/DeadIntermediate/Discord-TeraBot-2.0.git
+cd Discord-TeraBot-2.0
 ```
 
-## Step 6: Install Node.js Dependencies
+### Step 5: Install Node Dependencies
 
+Install Node.js packages:
 ```bash
 npm install
 ```
 
-## Step 7: Install Python Dependencies
-
-Create a virtual environment (recommended):
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-Install Python packages:
-```bash
-pip install -r python_requirements.txt
-```
-
-## Step 8: Configure Environment Variables
+### Step 6: Configure Environment Variables
 
 Copy the example environment file:
 ```bash
@@ -143,7 +122,7 @@ DATABASE_URL=postgresql://botuser:your_password@localhost:5432/discord_bot
 # Or use Neon cloud database:
 # DATABASE_URL=postgresql://username:password@ep-xxx.region.aws.neon.tech/dbname?sslmode=require
 
-# Individual PostgreSQL credentials (auto-set if using Neon, or set manually)
+# Individual PostgreSQL credentials (optional, auto-parsed from DATABASE_URL)
 PGHOST=localhost
 PGPORT=5432
 PGUSER=botuser
@@ -156,50 +135,50 @@ NODE_ENV=production
 
 Save and exit (Ctrl+X, then Y, then Enter).
 
-## Step 9: Setup Database Schema
+### Step 7: Setup Database Schema
 
 Run database migrations:
 ```bash
 npm run db:push
 ```
 
-## Step 10: Test the Bot
+### Step 8: Test the Bot
 
 Start the application:
 ```bash
 npm run dev
 ```
 
-The web dashboard will be available at: `http://your-pi-ip:5000`
+The web dashboard will be available at: `http://your-server-ip:5000`
 
 You should see:
 - Express server starting
-- Python bot connecting to Discord
-- All 10 cogs loading
-- 35 commands syncing
+- Discord bot connecting
+- All commands registering
+- Bot status: Ready
 
 Press Ctrl+C to stop when testing is complete.
 
-## Step 11: Setup as a System Service (Production)
+### Step 9: Setup as a System Service (Production)
 
 For production deployment, create a systemd service to auto-start the bot:
 
 ```bash
-sudo nano /etc/systemd/system/discord-bot.service
+sudo nano /etc/systemd/system/terabot.service
 ```
 
 Add this configuration:
 ```ini
 [Unit]
-Description=Discord Bot with Web Dashboard
+Description=TeraBot 2.0 - Discord Bot
 After=network.target postgresql.service
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi/discord-bot
+User=youruser
+WorkingDirectory=/home/youruser/Discord-TeraBot-2.0
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/npm run dev
+ExecStart=/usr/bin/npm start
 Restart=always
 RestartSec=10
 
@@ -210,25 +189,25 @@ WantedBy=multi-user.target
 Enable and start the service:
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable discord-bot
-sudo systemctl start discord-bot
+sudo systemctl enable terabot
+sudo systemctl start terabot
 ```
 
 Check service status:
 ```bash
-sudo systemctl status discord-bot
+sudo systemctl status terabot
 ```
 
 View logs:
 ```bash
-sudo journalctl -u discord-bot -f
+sudo journalctl -u terabot -f
 ```
 
-## Step 12: Access Web Dashboard
+### Step 10: Access Web Dashboard
 
 Open a browser and navigate to:
 ```
-http://your-raspberry-pi-ip:5000/dashboard
+http://your-server-ip:5000/dashboard
 ```
 
 From here you can:
@@ -252,44 +231,42 @@ If you want to access the dashboard from outside your local network:
 
 Start bot manually:
 ```bash
-cd /path/to/discord-bot
-source venv/bin/activate  # if using virtual environment
+cd /path/to/Discord-TeraBot-2.0
 npm run dev
 ```
 
 Stop the service:
 ```bash
-sudo systemctl stop discord-bot
+sudo systemctl stop terabot
 ```
 
 Restart the service:
 ```bash
-sudo systemctl restart discord-bot
+sudo systemctl restart terabot
 ```
 
 View real-time logs:
 ```bash
-sudo journalctl -u discord-bot -f
+sudo journalctl -u terabot -f
 ```
 
 Update bot:
 ```bash
-sudo systemctl stop discord-bot
-cd /path/to/discord-bot
+sudo systemctl stop terabot
+cd /path/to/Discord-TeraBot-2.0
 # Upload new files or git pull
 npm install
-pip install -r python_requirements.txt
 npm run db:push
-sudo systemctl start discord-bot
+sudo systemctl start terabot
 ```
 
 ## Troubleshooting
 
 ### Bot won't start
-- Check logs: `sudo journalctl -u discord-bot -f`
+- Check logs: `sudo journalctl -u terabot -f`
 - Verify Discord token is correct in `.env`
 - Ensure database is accessible
-- Check Python dependencies are installed
+- Check Node.js dependencies are installed
 
 ### Database connection errors
 - Verify DATABASE_URL in `.env` is correct
@@ -301,43 +278,45 @@ sudo systemctl start discord-bot
 - Verify firewall settings: `sudo ufw status`
 - Check Express server logs
 
-### Python bot crashes
-- Activate virtual environment: `source venv/bin/activate`
-- Check Python version: `python3 --version` (should be 3.8+)
-- Reinstall dependencies: `pip install -r python_requirements.txt`
+### Node.js issues
+- Check Node.js version: `node --version` (should be 20.x LTS)
+- Clear node_modules and reinstall: `rm -rf node_modules && npm install`
+- Check for compilation errors: `npm run build`
 
 ## Bot Features
 
 Your bot includes:
-- **Moderation**: kick, ban, mute, unmute, warn, warnings, clearwarnings, clear
+- **Moderation**: kick, ban, timeout, jail, unjail, warn, modhistory, clear
 - **Utility**: ping, serverinfo, help, memberinfo
-- **Leveling**: 3-track system (text/voice/global) with leaderboards
-- **Tickets**: create, assign, close with button interface
-- **Giveaways**: create, end, list, reroll
-- **Welcome System**: public messages + staff logging
-- **Stream Notifications**: Twitch, YouTube, Kick support
-- **Role Reactions**: self-assignable roles
-- **Anti-Invite**: automatic Discord invite removal
-- **Embed Builder**: interactive modal + JSON support with save/reuse
+- **Tickets**: create, manage, close, assign, list with button/modal interface
+- **Giveaways**: create, end, list, reroll with requirement checking
+- **Welcome/Leave System**: customizable embed messages with placeholders
+- **Role Reactions**: self-assignable roles with templates
+- **Embed Builder**: interactive modal builder with save/reuse functionality
 - **Web Dashboard**: bot control panel with analytics
 
-Total: **35 slash commands** across **10 cogs**
+Built with **Discord.js v14** and **PostgreSQL** for robust performance.
 
-## Performance Tips for Raspberry Pi
+## Performance Tips
 
 1. **Use SSD for storage**: Boot from SSD instead of SD card for better performance
 2. **Enable swap**: Increase swap space if running multiple services
-3. **Monitor temperature**: Ensure proper cooling
-4. **Optimize PostgreSQL**: Adjust shared_buffers and work_mem for Pi's RAM
-5. **Use lightweight desktop**: Run headless or with minimal GUI
+3. **Monitor temperature**: Ensure proper cooling for your hardware
+4. **Optimize PostgreSQL**: Adjust shared_buffers and work_mem for available RAM
+5. **Use lightweight desktop**: Run headless or with minimal GUI to save resources
 
 ## Support
 
 For issues:
-1. Check logs first: `sudo journalctl -u discord-bot -f`
-2. Verify all environment variables are set correctly
-3. Ensure all dependencies are installed
+1. Check logs first: `sudo journalctl -u terabot -f`
+2. Verify all environment variables are set correctly in `.env`
+3. Ensure all dependencies are installed: `npm install`
 4. Check Discord bot permissions in Discord Developer Portal
+5. Review database schema: `npm run db:push`
+
+---
+
+**Legacy Python Code**: A previous Python version of this bot has been archived in `python_legacy/` for reference only. The current bot is built entirely with Node.js.
 
 ## License
 

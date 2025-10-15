@@ -5,6 +5,7 @@ import { guildMemberRemoveHandler } from './events/guildMemberRemove';
 import { interactionCreateHandler } from './events/interactionCreate';
 import { handleReactionAdd, handleReactionRemove } from './commands/roleReactions';
 import { commands } from './commands';
+import { StreamMonitor } from './streamMonitor';
 
 const client = new Client({
   intents: [
@@ -14,9 +15,13 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildPresences, // Required for detecting user activities/streaming
   ],
   partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
 });
+
+// Initialize stream monitor
+let streamMonitor: StreamMonitor | null = null;
 
 // Store commands in client
 (client as any).commands = new Collection();
@@ -25,7 +30,14 @@ commands.forEach(command => {
 });
 
 // Event handlers
-client.once(Events.ClientReady, readyHandler);
+client.once(Events.ClientReady, (c) => {
+  readyHandler(c);
+  
+  // Start stream monitor after bot is ready
+  streamMonitor = new StreamMonitor(client);
+  streamMonitor.start();
+});
+
 client.on(Events.GuildMemberAdd, guildMemberAddHandler);
 client.on(Events.GuildMemberRemove, guildMemberRemoveHandler);
 client.on(Events.InteractionCreate, interactionCreateHandler);
@@ -48,5 +60,15 @@ export async function initializeBot() {
     console.error('Failed to login to Discord:', error);
   }
 }
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Shutting down bot...');
+  if (streamMonitor) {
+    streamMonitor.stop();
+  }
+  client.destroy();
+  process.exit(0);
+});
 
 export { client };

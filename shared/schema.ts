@@ -19,6 +19,7 @@ export const discordServers = pgTable("discord_servers", {
   welcomeMessage: text("welcome_message"),
   moderationChannelId: varchar("moderation_channel_id"),
   staffLogChannelId: varchar("staff_log_channel_id"),
+  streamNotificationChannelId: varchar("stream_notification_channel_id"), // Channel for stream notifications
   settings: jsonb("settings").default({}),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -111,13 +112,22 @@ export const roleReactions = pgTable("role_reactions", {
 export const streamNotifications = pgTable("stream_notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   serverId: varchar("server_id").notNull().references(() => discordServers.id),
-  channelId: varchar("channel_id").notNull(),
+  userId: varchar("user_id").references(() => discordUsers.id), // Discord user who added themselves
+  channelId: varchar("channel_id").notNull(), // Notification channel
   platform: text("platform").notNull(), // twitch, youtube, kick
-  username: text("username").notNull(),
-  messageId: varchar("message_id"),
-  notificationMessage: text("notification_message"),
+  platformUserId: text("platform_user_id"), // Platform-specific user ID
+  username: text("username").notNull(), // Platform username
+  displayName: text("display_name"), // Platform display name
+  avatarUrl: text("avatar_url"), // Platform avatar URL
+  messageId: varchar("message_id"), // Last notification message ID
+  notificationMessage: text("notification_message"), // Custom notification message
+  roleIdToPing: varchar("role_id_to_ping"), // Role to ping on live
   isLive: boolean("is_live").default(false),
   isActive: boolean("is_active").default(true),
+  liveTitle: text("live_title"), // Current stream title
+  liveGame: text("live_game"), // Current game/category
+  liveViewers: integer("live_viewers"), // Current viewer count
+  liveStartedAt: timestamp("live_started_at"), // When stream went live
   lastChecked: timestamp("last_checked"),
   createdAt: timestamp("created_at").defaultNow(),
 });
