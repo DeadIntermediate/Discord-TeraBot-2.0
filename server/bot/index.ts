@@ -18,6 +18,7 @@ const client = new Client({
     GatewayIntentBits.GuildPresences, // Required for detecting user activities/streaming
   ],
   partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
+  shards: 'auto', // Automatic guild sharding - Discord calculates optimal shard count
 });
 
 // Initialize stream monitor
@@ -33,9 +34,32 @@ commands.forEach(command => {
 client.once(Events.ClientReady, (c) => {
   readyHandler(c);
   
-  // Start stream monitor after bot is ready
-  streamMonitor = new StreamMonitor(client);
-  streamMonitor.start();
+  // Start stream monitor after bot is ready (only on shard 0 to avoid duplicates)
+  if (!client.shard || client.shard.ids.includes(0)) {
+    streamMonitor = new StreamMonitor(client);
+    streamMonitor.start();
+  }
+});
+
+// Shard-specific events
+client.on(Events.ShardReady, (id: number) => {
+  console.log(`✅ Shard ${id} is ready`);
+});
+
+client.on(Events.ShardDisconnect, (event: CloseEvent, id: number) => {
+  console.log(`⚠️ Shard ${id} disconnected`, event);
+});
+
+client.on(Events.ShardError, (error: Error, id: number) => {
+  console.error(`❌ Shard ${id} error:`, error);
+});
+
+client.on(Events.ShardReconnecting, (id: number) => {
+  console.log(`🔄 Shard ${id} reconnecting...`);
+});
+
+client.on(Events.ShardResume, (id: number, replayed: number) => {
+  console.log(`✅ Shard ${id} resumed (${replayed} events replayed)`);
 });
 
 client.on(Events.GuildMemberAdd, guildMemberAddHandler);
