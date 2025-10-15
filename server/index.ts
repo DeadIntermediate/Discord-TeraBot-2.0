@@ -38,7 +38,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Start Python Discord bot using controller
+  // Start Discord bot using controller
   await botController.start();
   
   const server = await registerRoutes(app);
