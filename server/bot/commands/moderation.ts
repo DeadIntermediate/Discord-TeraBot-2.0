@@ -247,9 +247,363 @@ const clearCommand = {
   },
 };
 
+const jailCommand = {
+  data: new SlashCommandBuilder()
+    .setName('jail')
+    .setDescription('Jail a user (restrict to jail channel only)')
+    .addUserOption(option =>
+      option.setName('user')
+        .setDescription('The user to jail')
+        .setRequired(true))
+    .addStringOption(option =>
+      option.setName('reason')
+        .setDescription('Reason for jailing')
+        .setRequired(false))
+    .addIntegerOption(option =>
+      option.setName('duration')
+        .setDescription('Duration in minutes (leave empty for permanent)')
+        .setRequired(false)
+        .setMinValue(1))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+
+  async execute(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+    const reason = interaction.options.getString('reason') || 'No reason provided';
+    const duration = interaction.options.getInteger('duration');
+    
+    if (!interaction.guild) {
+      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      return;
+    }
+
+    try {
+      const member = await interaction.guild.members.fetch(user.id);
+      
+      if (!member.moderatable) {
+        await interaction.reply({ content: 'I cannot jail this user.', ephemeral: true });
+        return;
+      }
+
+      // Get server settings for jail role and channel
+      const server = await storage.getDiscordServer(interaction.guild.id);
+      const jailRoleId = server?.settings?.jailRoleId;
+      const jailChannelId = server?.settings?.jailChannelId;
+
+      if (!jailRoleId) {
+        await interaction.reply({ 
+          content: 'Jail role not configured. Please set up a jail role in server settings.', 
+          ephemeral: true 
+        });
+        return;
+      }
+
+      const jailRole = interaction.guild.roles.cache.get(jailRoleId);
+      if (!jailRole) {
+        await interaction.reply({ 
+          content: 'Jail role not found. Please reconfigure the jail role.', 
+          ephemeral: true 
+        });
+        return;
+      }
+
+      // Add jail role
+      await member.roles.add(jailRole, reason);
+
+      // Calculate expiration if duration is provided
+      let expiresAt: Date | undefined;
+      if (duration) {
+        expiresAt = new Date(Date.now() + duration * 60000);
+      }
+
+      // Log to database
+      await storage.createModerationLog({
+        serverId: interaction.guild.id,
+        moderatorId: interaction.user.id,
+        targetUserId: user.id,
+        action: 'jail',
+        reason,
+        duration,
+        channelId: interaction.channel?.id,
+        expiresAt,
+      });
+
+      const embed = new EmbedBuilder()
+        .setColor(0x8b4513) // Brown color for jail
+        .setTitle('🔒 User Jailed')
+        .setDescription(`${user.tag} has been jailed.`)
+        .addFields(
+          { name: 'Reason', value: reason, inline: true },
+          { name: 'Duration', value: duration ? `${duration} minutes` : 'Permanent', inline: true },
+          { name: 'Moderator', value: interaction.user.tag, inline: true }
+        )
+        .setTimestamp();
+
+      if (jailChannelId) {
+        embed.addFields({ 
+          name: 'Jail Channel', 
+          value: `<#${jailChannelId}>`, 
+          inline: true 
+        });
+      }
+
+      await interaction.reply({ embeds: [embed] });
+
+      // Schedule unjail if duration is set
+      if (duration && expiresAt) {
+        setTimeout(async () => {
+          try {
+            const currentMember = await interaction.guild!.members.fetch(user.id);
+            await currentMember.roles.remove(jailRole, 'Jail duration expired');
+            
+            // Log the automatic unjail
+            await storage.createModerationLog({
+              serverId: interaction.guild!.id,
+              moderatorId: interaction.client.user.id,
+              targetUserId: user.id,
+              action: 'unjail',
+              reason: 'Jail duration expired (automatic)',
+              channelId: interaction.channel?.id,
+            });
+          } catch (error) {
+            console.error('Error auto-unjailing user:', error);
+          }
+        }, duration * 60000);
+      }
+
+    } catch (error) {
+      console.error('Error jailing user:', error);
+      await interaction.reply({ content: 'An error occurred while jailing the user.', ephemeral: true });
+    }
+  },
+};
+
+const unjailCommand = {
+  data: new SlashCommandBuilder()
+    .setName('unjail')
+    .setDescription('Remove a user from jail')
+    .addUserOption(option =>
+      option.setName('user')
+        .setDescription('The user to unjail')
+        .setRequired(true))
+    .addStringOption(option =>
+      option.setName('reason')
+        .setDescription('Reason for unjailing')
+        .setRequired(false))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+
+  async execute(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+    const reason = interaction.options.getString('reason') || 'No reason provided';
+    
+    if (!interaction.guild) {
+      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      return;
+    }
+
+    try {
+      const member = await interaction.guild.members.fetch(user.id);
+      
+      // Get server settings for jail role
+      const server = await storage.getDiscordServer(interaction.guild.id);
+      const jailRoleId = server?.settings?.jailRoleId;
+
+      if (!jailRoleId) {
+        await interaction.reply({ 
+          content: 'Jail role not configured.', 
+          ephemeral: true 
+        });
+        return;
+      }
+
+      const jailRole = interaction.guild.roles.cache.get(jailRoleId);
+      if (!jailRole) {
+        await interaction.reply({ 
+          content: 'Jail role not found.', 
+          ephemeral: true 
+        });
+        return;
+      }
+
+      if (!member.roles.cache.has(jailRoleId)) {
+        await interaction.reply({ 
+          content: 'This user is not jailed.', 
+          ephemeral: true 
+        });
+        return;
+      }
+
+      // Remove jail role
+      await member.roles.remove(jailRole, reason);
+
+      // Log to database
+      await storage.createModerationLog({
+        serverId: interaction.guild.id,
+        moderatorId: interaction.user.id,
+        targetUserId: user.id,
+        action: 'unjail',
+        reason,
+        channelId: interaction.channel?.id,
+      });
+
+      const embed = new EmbedBuilder()
+        .setColor(0x00ff00) // Green for success
+        .setTitle('🔓 User Unjailed')
+        .setDescription(`${user.tag} has been released from jail.`)
+        .addFields(
+          { name: 'Reason', value: reason, inline: true },
+          { name: 'Moderator', value: interaction.user.tag, inline: true }
+        )
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error unjailing user:', error);
+      await interaction.reply({ content: 'An error occurred while unjailing the user.', ephemeral: true });
+    }
+  },
+};
+
+const warnCommand = {
+  data: new SlashCommandBuilder()
+    .setName('warn')
+    .setDescription('Warn a user')
+    .addUserOption(option =>
+      option.setName('user')
+        .setDescription('The user to warn')
+        .setRequired(true))
+    .addStringOption(option =>
+      option.setName('reason')
+        .setDescription('Reason for the warning')
+        .setRequired(true))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+
+  async execute(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+    const reason = interaction.options.getString('reason', true);
+    
+    if (!interaction.guild) {
+      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      return;
+    }
+
+    try {
+      // Log to database
+      await storage.createModerationLog({
+        serverId: interaction.guild.id,
+        moderatorId: interaction.user.id,
+        targetUserId: user.id,
+        action: 'warn',
+        reason,
+        channelId: interaction.channel?.id,
+      });
+
+      const embed = new EmbedBuilder()
+        .setColor(0xffff00) // Yellow for warning
+        .setTitle('⚠️ User Warned')
+        .setDescription(`${user.tag} has been warned.`)
+        .addFields(
+          { name: 'Reason', value: reason, inline: true },
+          { name: 'Moderator', value: interaction.user.tag, inline: true }
+        )
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed] });
+
+      // Try to send DM to the warned user
+      try {
+        const dmEmbed = new EmbedBuilder()
+          .setColor(0xffff00)
+          .setTitle('⚠️ Warning Received')
+          .setDescription(`You have received a warning in **${interaction.guild.name}**.`)
+          .addFields(
+            { name: 'Reason', value: reason, inline: false },
+            { name: 'Moderator', value: interaction.user.tag, inline: true }
+          )
+          .setTimestamp();
+
+        await user.send({ embeds: [dmEmbed] });
+      } catch (error) {
+        // User has DMs disabled, continue silently
+      }
+
+    } catch (error) {
+      console.error('Error warning user:', error);
+      await interaction.reply({ content: 'An error occurred while warning the user.', ephemeral: true });
+    }
+  },
+};
+
+const modHistoryCommand = {
+  data: new SlashCommandBuilder()
+    .setName('modhistory')
+    .setDescription('View moderation history for a user')
+    .addUserOption(option =>
+      option.setName('user')
+        .setDescription('The user to check history for')
+        .setRequired(true))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+
+  async execute(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+    
+    if (!interaction.guild) {
+      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      return;
+    }
+
+    try {
+      const history = await storage.getUserModerationHistory(user.id, interaction.guild.id);
+
+      if (history.length === 0) {
+        await interaction.reply({ 
+          content: `${user.tag} has no moderation history.`, 
+          ephemeral: true 
+        });
+        return;
+      }
+
+      const historyList = history.slice(0, 10).map(log => {
+        const actionEmoji = {
+          warn: '⚠️',
+          mute: '🔇',
+          jail: '🔒',
+          unjail: '🔓',
+          kick: '👢',
+          ban: '🔨',
+          clear: '🧹'
+        }[log.action] || '📝';
+
+        const dateStr = new Date(log.createdAt).toLocaleDateString();
+        return `${actionEmoji} **${log.action.toUpperCase()}** - ${log.reason} (${dateStr})`;
+      }).join('\n');
+
+      const embed = new EmbedBuilder()
+        .setColor(0x5865f2)
+        .setTitle(`📋 Moderation History: ${user.tag}`)
+        .setDescription(historyList)
+        .setFooter({ text: `Showing ${Math.min(history.length, 10)} of ${history.length} entries` })
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+
+    } catch (error) {
+      console.error('Error fetching moderation history:', error);
+      await interaction.reply({ 
+        content: 'An error occurred while fetching moderation history.', 
+        ephemeral: true 
+      });
+    }
+  },
+};
+
 export const moderationCommands = [
   kickCommand,
   banCommand,
   muteCommand,
   clearCommand,
+  jailCommand,
+  unjailCommand,
+  warnCommand,
+  modHistoryCommand,
 ];

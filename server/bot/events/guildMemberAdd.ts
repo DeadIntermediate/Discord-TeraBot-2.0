@@ -33,23 +33,61 @@ export async function guildMemberAddHandler(member: GuildMember) {
     
     if (channel) {
       const welcomeMessage = server.welcomeMessage || 
-        `Welcome to the server, ${member}! We're excited to have you here!`;
+        `Welcome to **{serverName}**, {mention}! We're excited to have you here!`;
+
+      // Replace placeholders in welcome message
+      const formattedMessage = welcomeMessage
+        .replace('{mention}', member.toString())
+        .replace('{username}', member.user.username)
+        .replace('{displayName}', member.displayName)
+        .replace('{tag}', member.user.tag)
+        .replace('{serverName}', member.guild.name)
+        .replace('{memberCount}', member.guild.memberCount.toString());
+
+      // Check account age for potential security warnings
+      const accountAge = Date.now() - member.user.createdAt.getTime();
+      const accountAgeDays = Math.floor(accountAge / (1000 * 60 * 60 * 24));
+      const minAccountAge = server.settings?.minAccountAgeDays || 0;
+      
+      let accountAgeWarning = '';
+      if (minAccountAge > 0 && accountAgeDays < minAccountAge) {
+        accountAgeWarning = '⚠️ **New Account Warning** - This account is newer than the server\'s minimum age requirement.';
+      }
 
       const embed = new EmbedBuilder()
-        .setColor(0x5865f2)
+        .setColor(accountAgeWarning ? 0xffa500 : 0x5865f2) // Orange if warning, blue otherwise
         .setTitle('👋 Welcome to the Server!')
-        .setDescription(welcomeMessage)
-        .setThumbnail(member.user.displayAvatarURL())
+        .setDescription(formattedMessage)
+        .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
         .addFields(
-          { name: '📋 Server Rules', value: 'Check out the rules channel for guidelines', inline: true },
-          { name: '💬 Get Started', value: 'Introduce yourself and start chatting!', inline: true },
-          { name: '🎮 Have Fun', value: 'Join voice channels and participate in activities', inline: true }
+          { name: '� User Info', value: `${member.user.tag}\nID: ${member.id}`, inline: true },
+          { name: '� Member Count', value: `${member.guild.memberCount} members`, inline: true },
+          { name: '📅 Account Created', value: `<t:${Math.floor(member.user.createdAt.getTime() / 1000)}:R>`, inline: true }
         )
-        .setFooter({ text: `Member #${member.guild.memberCount}` })
+        .setFooter({ text: `Member #${member.guild.memberCount} • Welcome to ${member.guild.name}` })
         .setTimestamp();
 
+      // Add warning field if account is too new
+      if (accountAgeWarning) {
+        embed.addFields({ name: '⚠️ Security Notice', value: accountAgeWarning, inline: false });
+      }
+
+      // Add custom fields from server settings
+      const customFields = server.settings?.welcomeFields;
+      if (customFields && Array.isArray(customFields)) {
+        customFields.forEach(field => {
+          if (field.name && field.value) {
+            embed.addFields({ 
+              name: field.name, 
+              value: field.value.replace('{mention}', member.toString()), 
+              inline: field.inline || false 
+            });
+          }
+        });
+      }
+
       await channel.send({ 
-        content: `Welcome ${member}!`,
+        content: server.settings?.pingOnWelcome ? member.toString() : undefined,
         embeds: [embed] 
       });
     }

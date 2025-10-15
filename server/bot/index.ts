@@ -1,7 +1,9 @@
 import { Client, GatewayIntentBits, Events, Collection } from 'discord.js';
 import { readyHandler } from './events/ready';
 import { guildMemberAddHandler } from './events/guildMemberAdd';
+import { guildMemberRemoveHandler } from './events/guildMemberRemove';
 import { interactionCreateHandler } from './events/interactionCreate';
+import { handleReactionAdd, handleReactionRemove } from './commands/roleReactions';
 import { commands } from './commands';
 
 const client = new Client({
@@ -13,6 +15,7 @@ const client = new Client({
     GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.MessageContent,
   ],
+  partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
 });
 
 // Store commands in client
@@ -24,7 +27,10 @@ commands.forEach(command => {
 // Event handlers
 client.once(Events.ClientReady, readyHandler);
 client.on(Events.GuildMemberAdd, guildMemberAddHandler);
+client.on(Events.GuildMemberRemove, guildMemberRemoveHandler);
 client.on(Events.InteractionCreate, interactionCreateHandler);
+client.on(Events.MessageReactionAdd, handleReactionAdd);
+client.on(Events.MessageReactionRemove, handleReactionRemove);
 
 // Initialize bot
 export async function initializeBot() {
