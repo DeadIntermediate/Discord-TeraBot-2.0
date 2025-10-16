@@ -16,16 +16,17 @@ export async function readyHandler(client: Client) {
   
   console.log('🚀 Starting Tera Bot initialization...\n');
   
-  // Test Database Connection
+  // Test Database Connection (additional verification)
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('📊 DATABASE CONNECTION');
+  console.log('📊 DATABASE CONNECTION VERIFICATION');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   try {
     const testConnection = await pool.query('SELECT NOW()');
-    console.log('✅ PostgreSQL connected successfully');
+    console.log('✅ PostgreSQL connection verified in bot ready handler');
     console.log(`🕐 Database time: ${testConnection.rows[0].now}`);
   } catch (error) {
-    console.error('❌ PostgreSQL connection failed:', error);
+    console.error('❌ PostgreSQL connection verification failed in ready handler:', error);
+    console.error('⚠️ Bot may experience issues with database-dependent features');
   }
   console.log('');
   

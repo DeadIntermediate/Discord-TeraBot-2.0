@@ -5,6 +5,9 @@ import { giveawayCommands } from './giveaways';
 import { embedCommands } from './embeds';
 import { roleReactionCommands } from './roleReactions';
 import * as streamsCommand from './streams';
+import * as gamesCommand from './games';
+import * as gamehelpCommand from './gamehelp';
+import * as gamedemoCommand from './gamedemo';
 
 export const commands = [
   ...moderationCommands,
@@ -14,4 +17,7 @@ export const commands = [
   ...embedCommands,
   ...roleReactionCommands,
   streamsCommand,
+  gamesCommand,
+  gamehelpCommand,
+  gamedemoCommand,
 ];

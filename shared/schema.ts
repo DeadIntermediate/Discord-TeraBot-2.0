@@ -142,6 +142,50 @@ export const savedEmbeds = pgTable("saved_embeds", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const gameCache = pgTable("game_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  gameId: varchar("game_id").notNull().unique(), // External API game ID
+  gameName: text("game_name").notNull(),
+  gameSlug: text("game_slug"),
+  gameData: jsonb("game_data").notNull(), // Cached game information from API
+  source: text("source").notNull(), // 'rawg', 'igdb', 'steam', etc.
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const gameFavorites = pgTable("game_favorites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => discordUsers.id),
+  serverId: varchar("server_id").references(() => discordServers.id), // Optional: server-specific favorites
+  gameId: varchar("game_id").notNull(), // External API game ID
+  gameName: text("game_name").notNull(),
+  gameSlug: text("game_slug"),
+  gameImage: text("game_image"), // Game thumbnail/cover image
+  rating: integer("rating"), // User's personal rating 1-10
+  notes: text("notes"), // User's personal notes about the game
+  isPublic: boolean("is_public").default(true), // Whether others can see this favorite
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userGameUnique: unique().on(table.userId, table.gameId, table.serverId),
+}));
+
+export const gameRecommendations = pgTable("game_recommendations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serverId: varchar("server_id").notNull().references(() => discordServers.id),
+  channelId: varchar("channel_id").notNull(),
+  recommenderId: varchar("recommender_id").notNull().references(() => discordUsers.id),
+  targetUserId: varchar("target_user_id").references(() => discordUsers.id), // Optional: specific user recommendation
+  gameId: varchar("game_id").notNull(),
+  gameName: text("game_name").notNull(),
+  reason: text("reason"), // Why they recommend this game
+  messageId: varchar("message_id"), // Discord message ID for tracking
+  status: text("status").default("pending"), // pending, accepted, declined, ignored
+  createdAt: timestamp("created_at").defaultNow(),
+  respondedAt: timestamp("responded_at"),
+});
+
 // Relations
 export const discordServersRelations = relations(discordServers, ({ many }) => ({
   members: many(serverMembers),
@@ -151,6 +195,8 @@ export const discordServersRelations = relations(discordServers, ({ many }) => (
   roleReactions: many(roleReactions),
   streamNotifications: many(streamNotifications),
   savedEmbeds: many(savedEmbeds),
+  gameFavorites: many(gameFavorites),
+  gameRecommendations: many(gameRecommendations),
 }));
 
 export const discordUsersRelations = relations(discordUsers, ({ many }) => ({
@@ -159,6 +205,9 @@ export const discordUsersRelations = relations(discordUsers, ({ many }) => ({
   moderatedLogs: many(moderationLogs),
   tickets: many(tickets),
   hostedGiveaways: many(giveaways),
+  gameFavorites: many(gameFavorites),
+  gameRecommendations: many(gameRecommendations),
+  gameRecommendationsReceived: many(gameRecommendations),
 }));
 
 export const serverMembersRelations = relations(serverMembers, ({ one }) => ({
@@ -238,6 +287,32 @@ export const savedEmbedsRelations = relations(savedEmbeds, ({ one }) => ({
   }),
 }));
 
+export const gameFavoritesRelations = relations(gameFavorites, ({ one }) => ({
+  user: one(discordUsers, {
+    fields: [gameFavorites.userId],
+    references: [discordUsers.id],
+  }),
+  server: one(discordServers, {
+    fields: [gameFavorites.serverId],
+    references: [discordServers.id],
+  }),
+}));
+
+export const gameRecommendationsRelations = relations(gameRecommendations, ({ one }) => ({
+  server: one(discordServers, {
+    fields: [gameRecommendations.serverId],
+    references: [discordServers.id],
+  }),
+  recommender: one(discordUsers, {
+    fields: [gameRecommendations.recommenderId],
+    references: [discordUsers.id],
+  }),
+  targetUser: one(discordUsers, {
+    fields: [gameRecommendations.targetUserId],
+    references: [discordUsers.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -289,6 +364,22 @@ export const insertSavedEmbedSchema = createInsertSchema(savedEmbeds).omit({
   updatedAt: true,
 });
 
+export const insertGameCacheSchema = createInsertSchema(gameCache).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertGameFavoriteSchema = createInsertSchema(gameFavorites).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertGameRecommendationSchema = createInsertSchema(gameRecommendations).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -319,3 +410,12 @@ export type StreamNotification = typeof streamNotifications.$inferSelect;
 
 export type InsertSavedEmbed = z.infer<typeof insertSavedEmbedSchema>;
 export type SavedEmbed = typeof savedEmbeds.$inferSelect;
+
+export type InsertGameCache = z.infer<typeof insertGameCacheSchema>;
+export type GameCache = typeof gameCache.$inferSelect;
+
+export type InsertGameFavorite = z.infer<typeof insertGameFavoriteSchema>;
+export type GameFavorite = typeof gameFavorites.$inferSelect;
+
+export type InsertGameRecommendation = z.infer<typeof insertGameRecommendationSchema>;
+export type GameRecommendation = typeof gameRecommendations.$inferSelect;

@@ -1,5 +1,6 @@
 import { log } from "./vite";
 import { initializeBot, client } from "./bot";
+import { testDatabaseConnection } from "./db";
 
 class BotController {
   private botStatus: "running" | "stopped" | "starting" | "error" = "stopped";
@@ -15,6 +16,12 @@ class BotController {
       this.botStatus = "starting";
       log("Starting Discord bot...");
       
+      // Verify database connectivity before starting bot
+      const dbConnected = await testDatabaseConnection();
+      if (!dbConnected) {
+        throw new Error("Database connection failed - bot cannot start without database");
+      }
+      
       await initializeBot();
       
       this.botStatus = "running";
@@ -24,6 +31,16 @@ class BotController {
       log(`Failed to start bot: ${error.message}`);
       this.botStatus = "error";
       this.lastError = error.message;
+      
+      // Log specific database connection errors with helpful details
+      if (error.message.includes("database") || error.message.includes("connection")) {
+        log("Database connection troubleshooting:");
+        log("- Check if PostgreSQL server is running");
+        log("- Verify DATABASE_URL environment variable");
+        log("- Ensure database exists and credentials are correct");
+        log("- Check network connectivity to database server");
+      }
+      
       return false;
     }
   }
