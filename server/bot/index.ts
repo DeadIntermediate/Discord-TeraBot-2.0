@@ -3,6 +3,7 @@ import { readyHandler } from './events/ready';
 import { guildMemberAddHandler } from './events/guildMemberAdd';
 import { guildMemberRemoveHandler } from './events/guildMemberRemove';
 import { interactionCreateHandler } from './events/interactionCreate';
+import { voiceStateUpdateHandler, startVoiceXpTracker } from './events/voiceStateUpdate';
 import { handleReactionAdd, handleReactionRemove } from './commands/roleReactions';
 import { commands } from './commands';
 import { StreamMonitor } from './streamMonitor';
@@ -39,6 +40,9 @@ client.once(Events.ClientReady, (c) => {
     streamMonitor = new StreamMonitor(client);
     streamMonitor.start();
   }
+  
+  // Start voice XP tracker
+  startVoiceXpTracker(client);
 });
 
 // Shard-specific events
@@ -67,6 +71,7 @@ client.on(Events.GuildMemberRemove, guildMemberRemoveHandler);
 client.on(Events.InteractionCreate, interactionCreateHandler);
 client.on(Events.MessageReactionAdd, handleReactionAdd);
 client.on(Events.MessageReactionRemove, handleReactionRemove);
+client.on(Events.VoiceStateUpdate, voiceStateUpdateHandler);
 
 // Initialize bot
 export async function initializeBot() {

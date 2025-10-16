@@ -79,26 +79,54 @@ const levelCommand = {
         return;
       }
 
-      const xpForNextLevel = Math.pow(member.level + 1, 2) * 100;
-      const xpForCurrentLevel = Math.pow(member.level, 2) * 100;
-      const xpNeeded = xpForNextLevel - member.xp;
-      const progressXP = member.xp - xpForCurrentLevel;
-      const totalXPForLevel = xpForNextLevel - xpForCurrentLevel;
-      const progressPercent = Math.floor((progressXP / totalXPForLevel) * 100);
+      const xpForNextLevel = Math.pow(member.level + 1, 2) * 100
+      const xpForCurrentLevel = Math.pow(member.level, 2) * 100
+      const xpNeeded = xpForNextLevel - member.xp
+      const progressXP = member.xp - xpForCurrentLevel
+      const totalXPForLevel = xpForNextLevel - xpForCurrentLevel
+      const progressPercent = Math.floor((progressXP / totalXPForLevel) * 100)
+      
+      // Create visual progress bar for overall XP
+      const barLength = 20
+      const filledLength = Math.floor((progressXP / totalXPForLevel) * barLength)
+      const emptyLength = barLength - filledLength
+      const progressBar = '🟩'.repeat(filledLength) + '🟥'.repeat(emptyLength)
+      
+      // Text XP progress
+      const textXpForNextLevel = (member.textLevel + 1) * 100
+      const textXpForCurrentLevel = member.textLevel * 100
+      const textProgressXP = member.textXp - textXpForCurrentLevel
+      const textTotalXP = textXpForNextLevel - textXpForCurrentLevel
+      const textFilledLength = Math.floor((textProgressXP / textTotalXP) * barLength)
+      const textProgressBar = '🟦'.repeat(textFilledLength) + '⬜'.repeat(barLength - textFilledLength)
+      const textProgressPercent = Math.floor((textProgressXP / textTotalXP) * 100)
+      
+      // Voice XP progress
+      const voiceXpForNextLevel = (member.voiceLevel + 1) * 100
+      const voiceXpForCurrentLevel = member.voiceLevel * 100
+      const voiceProgressXP = member.voiceXp - voiceXpForCurrentLevel
+      const voiceTotalXP = voiceXpForNextLevel - voiceXpForCurrentLevel
+      const voiceFilledLength = Math.floor((voiceProgressXP / voiceTotalXP) * barLength)
+      const voiceProgressBar = '�'.repeat(voiceFilledLength) + '🟥'.repeat(barLength - voiceFilledLength)
+      const voiceProgressPercent = Math.floor((voiceProgressXP / voiceTotalXP) * 100)
 
       const embed = new EmbedBuilder()
         .setColor(0x4caf50)
-        .setTitle(`${targetUser.tag}'s Level`)
+        .setTitle(`📊 ${targetUser.tag}'s Profile`)
         .setThumbnail(targetUser.displayAvatarURL())
+        .setDescription(`**Global Level ${member.globalLevel}**`)
         .addFields(
-          { name: 'Level', value: member.level.toString(), inline: true },
-          { name: 'XP', value: member.xp.toString(), inline: true },
-          { name: 'XP to Next Level', value: xpNeeded.toString(), inline: true },
-          { name: 'Messages Sent', value: member.messageCount.toString(), inline: true },
-          { name: 'Voice Time', value: `${Math.floor(member.voiceTime / 60)}h ${member.voiceTime % 60}m`, inline: true },
-          { name: 'Progress', value: `${progressPercent}%`, inline: true }
+          { name: '📝 Text Level', value: `Level ${member.textLevel}`, inline: true },
+          { name: '🎤 Voice Level', value: `Level ${member.voiceLevel}`, inline: true },
+          { name: '📈 Legacy Level', value: `Level ${member.level}`, inline: true },
+          { name: '📝 Text XP Progress', value: `\`${textProgressBar}\` ${textProgressPercent}%\n${textProgressXP}/${textTotalXP} XP`, inline: false },
+          { name: '🎤 Voice XP Progress', value: `\`${voiceProgressBar}\` ${voiceProgressPercent}%\n${voiceProgressXP}/${voiceTotalXP} XP`, inline: false },
+          { name: '💬 Messages Sent', value: member.messageCount.toLocaleString(), inline: true },
+          { name: '⏱️ Voice Time', value: `${Math.floor(member.voiceTime / 60)}h ${member.voiceTime % 60}m`, inline: true },
+          { name: '🎯 Total XP', value: `${member.xp.toLocaleString()}`, inline: true }
         )
-        .setTimestamp();
+        .setFooter({ text: `Requested by ${interaction.user.tag}` })
+        .setTimestamp()
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
