@@ -8,6 +8,8 @@ import * as streamsCommand from './streams';
 import * as gamesCommand from './games';
 import * as gamehelpCommand from './gamehelp';
 import * as gamedemoCommand from './gamedemo';
+import * as cahCommand from './cah';
+import * as cahadminCommand from './cahadmin';
 
 export const commands = [
   ...moderationCommands,
@@ -20,4 +22,6 @@ export const commands = [
   gamesCommand,
   gamehelpCommand,
   gamedemoCommand,
+  cahCommand,
+  cahadminCommand,
 ];
