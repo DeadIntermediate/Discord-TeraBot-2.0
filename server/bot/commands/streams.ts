@@ -129,11 +129,7 @@ async function handleAddMe(interaction: ChatInputCommandInteraction) {
   const user = await interaction.user.fetch(true);
   const connections: { platform: string; username: string; id: string }[] = [];
 
-  // Check for connected accounts
-  // Note: Discord's API requires special permissions to access user connections
-  // For now, we'll instruct the user to manually add them
-  
-  // Instead, let's check the user's profile activities and connections that are visible
+  // Check user's profile activities for streaming
   const member = await interaction.guild.members.fetch(interaction.user.id);
   
   // Check user's presence/activities for streaming
@@ -168,12 +164,15 @@ async function handleAddMe(interaction: ChatInputCommandInteraction) {
   if (connections.length === 0) {
     await interaction.editReply({
       content: `❌ No streaming platforms detected in your Discord profile!\n\n` +
-        `**How to connect your accounts:**\n` +
-        `1. Go to User Settings → Connections\n` +
-        `2. Connect your Twitch, YouTube, or Kick account\n` +
-        `3. Make sure the connection is set to "Display on profile"\n` +
-        `4. Try the command again\n\n` +
-        `**Alternative:** Use \`/stream add platform:twitch username:YourUsername\` to manually add your channel.`,
+        `**Why this happens:**\n` +
+        `• You must be actively streaming for the bot to detect your account\n` +
+        `• Discord's bot API only sees live streaming activities\n\n` +
+        `**Quickest solution:** Use the manual command instead:\n` +
+        `\`/stream add platform:twitch username:YourUsername\`\n\n` +
+        `**Other options:**\n` +
+        `1. Start streaming on Twitch/YouTube/Kick\n` +
+        `2. Try the \`/stream addme\` command again\n\n` +
+        `Or ask an admin to add you with the manual command.`,
     });
     return;
   }
