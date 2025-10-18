@@ -164,9 +164,17 @@ async function handleSearch(interaction: ChatInputCommandInteraction) {
     }
   } catch (error) {
     console.error('Error in game search:', error);
-    await interaction.editReply({
-      content: '❌ An error occurred while searching for games. Please try again later.'
-    });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    
+    if (errorMsg.includes('RAWG_API_KEY')) {
+      await interaction.editReply({
+        content: '❌ Game search is not available yet.\n\n**Reason:** The bot admin needs to set up the RAWG API key.\n\n**Admin:** Get a free key at https://rawg.io/apidocs and add it to your `.env` file as `RAWG_API_KEY=your_key`'
+      });
+    } else {
+      await interaction.editReply({
+        content: '❌ An error occurred while searching for games. Please try again later.'
+      });
+    }
   }
 }
 
@@ -190,9 +198,17 @@ async function handleInfo(interaction: ChatInputCommandInteraction) {
     await showGameDetails(interaction, game);
   } catch (error) {
     console.error('Error getting game info:', error);
-    await interaction.editReply({
-      content: '❌ An error occurred while fetching game information. Please try again later.'
-    });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    
+    if (errorMsg.includes('RAWG_API_KEY')) {
+      await interaction.editReply({
+        content: '❌ Game info is not available yet.\n\n**Reason:** The bot admin needs to set up the RAWG API key.\n\n**Admin:** Get a free key at https://rawg.io/apidocs and add it to your `.env` file as `RAWG_API_KEY=your_key`'
+      });
+    } else {
+      await interaction.editReply({
+        content: '❌ An error occurred while fetching game information. Please try again later.'
+      });
+    }
   }
 }
 
@@ -217,9 +233,17 @@ async function handleRandom(interaction: ChatInputCommandInteraction) {
     }
   } catch (error) {
     console.error('Error getting random games:', error);
-    await interaction.editReply({
-      content: '❌ An error occurred while fetching random games. Please try again later.'
-    });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    
+    if (errorMsg.includes('RAWG_API_KEY')) {
+      await interaction.editReply({
+        content: '❌ Random games feature is not available yet.\n\n**Reason:** The bot admin needs to set up the RAWG API key.\n\n**Admin:** Get a free key at https://rawg.io/apidocs and add it to your `.env` file as `RAWG_API_KEY=your_key`'
+      });
+    } else {
+      await interaction.editReply({
+        content: '❌ An error occurred while fetching random games. Please try again later.'
+      });
+    }
   }
 }
 
@@ -240,9 +264,17 @@ async function handleTrending(interaction: ChatInputCommandInteraction) {
     await showGameList(interaction, trendingGames, '🔥 Trending Games');
   } catch (error) {
     console.error('Error getting trending games:', error);
-    await interaction.editReply({
-      content: '❌ An error occurred while fetching trending games. Please try again later.'
-    });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    
+    if (errorMsg.includes('RAWG_API_KEY')) {
+      await interaction.editReply({
+        content: '❌ Trending games feature is not available yet.\n\n**Reason:** The bot admin needs to set up the RAWG API key.\n\n**Admin:** Get a free key at https://rawg.io/apidocs and add it to your `.env` file as `RAWG_API_KEY=your_key`'
+      });
+    } else {
+      await interaction.editReply({
+        content: '❌ An error occurred while fetching trending games. Please try again later.'
+      });
+    }
   }
 }
 

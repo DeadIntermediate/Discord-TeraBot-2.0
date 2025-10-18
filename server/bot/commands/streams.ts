@@ -165,14 +165,15 @@ async function handleAddMe(interaction: ChatInputCommandInteraction) {
     await interaction.editReply({
       content: `❌ No streaming platforms detected in your Discord profile!\n\n` +
         `**Why this happens:**\n` +
-        `• You must be actively streaming for the bot to detect your account\n` +
-        `• Discord's bot API only sees live streaming activities\n\n` +
+        `• Discord bots can only detect streaming accounts when you are actively streaming, due to Discord API limitations\n` +
+        `• If your accounts are connected but you are not streaming, the bot cannot detect them automatically\n\n` +
         `**Quickest solution:** Use the manual command instead:\n` +
         `\`/stream add platform:twitch username:YourUsername\`\n\n` +
         `**Other options:**\n` +
         `1. Start streaming on Twitch/YouTube/Kick\n` +
-        `2. Try the \`/stream addme\` command again\n\n` +
-        `Or ask an admin to add you with the manual command.`,
+        `2. Try the \`/stream addme\` command again while streaming\n\n` +
+        `Or ask an admin to add you with the manual command:\n` +
+        `\`/stream add platform:twitch username:YourUsername\` (replace with your platform and username).`,
     });
     return;
   }
