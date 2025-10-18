@@ -1,5 +1,6 @@
 import { VoiceState } from 'discord.js';
 import { storage } from '../../storage';
+import { info, debug, error } from '../../utils/logger';
 
 // Track users currently in voice channels
 const voiceSessionStart = new Map<string, number>();
@@ -21,9 +22,9 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
       return;
     }
     
-    // Start tracking session
-    voiceSessionStart.set(sessionKey, Date.now());
-    console.log(`🎤 ${newState.member?.user.tag} joined voice in ${newState.guild.name}`);
+  // Start tracking session
+  voiceSessionStart.set(sessionKey, Date.now());
+  info(`🎤 ${newState.member?.user.tag} joined voice in ${newState.guild.name}`);
   }
   
   // User left a voice channel or switched channels
@@ -87,7 +88,7 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
             
             // Check if they leveled up
             if (newVoiceLevel > (member.voiceLevel || 1)) {
-              console.log(`🎉 ${newState.member?.user.tag} reached Voice Level ${newVoiceLevel} in ${newState.guild.name}!`);
+              info(`🎉 ${newState.member?.user.tag} reached Voice Level ${newVoiceLevel} in ${newState.guild.name}!`);
               
               // Send level up notification in a system channel if available
               const systemChannel = newState.guild.systemChannel;
@@ -98,16 +99,17 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
               }
             }
             
-            console.log(`✅ Awarded ${xpGained} voice XP to ${newState.member?.user.tag} (${timeInVoice} minutes in voice)`);
+            info(`✅ Awarded ${xpGained} voice XP to ${newState.member?.user.tag} (${timeInVoice} minutes in voice)`);
           }
         } catch (error) {
-          console.error(`❌ Error updating voice XP for ${userId}:`, error);
+          const { error: logError } = await import('../../utils/logger');
+          logError(`❌ Error updating voice XP for ${userId}:`, error);
         }
       }
       
       // Remove session tracking
       voiceSessionStart.delete(sessionKey);
-      console.log(`🎤 ${newState.member?.user.tag} left voice in ${newState.guild.name} (${timeInVoice} min)`);
+      info(`🎤 ${newState.member?.user.tag} left voice in ${newState.guild.name} (${timeInVoice} min)`);
     }
   }
   
@@ -129,7 +131,8 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
             });
           }
         } catch (error) {
-          console.error(`❌ Error updating voice XP (AFK):`, error);
+          const { error: logError } = await import('../../utils/logger');
+          logError(`❌ Error updating voice XP (AFK):`, error);
         }
       }
     }
@@ -143,7 +146,7 @@ export function startVoiceXpTracker(client: any) {
   setInterval(async () => {
     const now = Date.now();
     
-    for (const [sessionKey, startTime] of voiceSessionStart.entries()) {
+  for (const [sessionKey, startTime] of Array.from(voiceSessionStart.entries())) {
       const [guildId, userId] = sessionKey.split('-');
       const timeInVoice = Math.floor((now - startTime) / 60000);
       
@@ -179,11 +182,12 @@ export function startVoiceXpTracker(client: any) {
             voiceSessionStart.set(sessionKey, now);
           }
         } catch (error) {
-          console.error(`❌ Error in periodic voice XP update:`, error);
+          const { error: logError } = await import('../../utils/logger');
+          logError(`❌ Error in periodic voice XP update:`, error);
         }
       }
     }
   }, VOICE_XP_INTERVAL);
   
-  console.log('🎤 Voice XP tracker started');
+  info('🎤 Voice XP tracker started');
 }

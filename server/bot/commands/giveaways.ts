@@ -265,7 +265,7 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction) {
   }
 
   // Select new winners
-  const newWinners = selectRandomWinners(entries, giveaway.winnerCount);
+  const newWinners = selectRandomWinners(entries, Number(giveaway.winnerCount || 1));
   
   // Update giveaway with new winners
   await storage.updateGiveaway(giveaway.id, {
@@ -292,7 +292,7 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction) {
 async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
   const status = interaction.options.getString('status') || 'all';
   
-  let giveaways;
+  let giveaways: any[];
   if (status === 'active') {
     giveaways = await storage.getActiveGiveaways(interaction.guild!.id);
   } else if (status === 'ended') {
@@ -311,7 +311,7 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
     const statusEmoji = giveaway.isActive ? '🟢' : '🔴';
     const entries = (giveaway.entries as string[] || []).length;
     
-    return `${statusEmoji} **${giveaway.prize}** | ${entries} entries | <#${giveaway.channelId}> | \`${giveaway.id.slice(-8)}\``;
+    return `${statusEmoji} **${giveaway.prize}** | ${entries} entries | <#${giveaway.channelId}> | \`${String(giveaway.id).slice(-8)}\``;
   }).join('\n');
 
   const listEmbed = new EmbedBuilder()
@@ -332,7 +332,7 @@ async function endGiveaway(giveawayId: string) {
     }
 
     const entries = giveaway.entries as string[] || [];
-    const winners = selectRandomWinners(entries, giveaway.winnerCount);
+  const winners = selectRandomWinners(entries, Number(giveaway.winnerCount || 1));
 
     // Update giveaway
     await storage.updateGiveaway(giveaway.id, {
@@ -351,7 +351,7 @@ async function endGiveaway(giveawayId: string) {
       .setTitle('🎉 GIVEAWAY ENDED 🎉')
       .setDescription(`**Prize:** ${giveaway.prize}\n\n${giveaway.description}`)
       .addFields(
-        { name: '🏆 Winners', value: giveaway.winnerCount.toString(), inline: true },
+  { name: '🏆 Winners', value: String(giveaway.winnerCount ?? 0), inline: true },
         { name: '⏰ Ended', value: time(giveaway.endsAt, TimestampStyles.RelativeTime), inline: true },
         { name: '🎯 Total Entries', value: entries.length.toString(), inline: true }
       )

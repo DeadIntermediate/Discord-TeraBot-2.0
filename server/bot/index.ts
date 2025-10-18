@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Events, Collection } from 'discord.js';
+import { Client, GatewayIntentBits, Events, Collection, Partials } from 'discord.js';
 import { readyHandler } from './events/ready';
 import { guildMemberAddHandler } from './events/guildMemberAdd';
 import { guildMemberRemoveHandler } from './events/guildMemberRemove';
@@ -7,6 +7,7 @@ import { voiceStateUpdateHandler, startVoiceXpTracker } from './events/voiceStat
 import { handleReactionAdd, handleReactionRemove } from './commands/roleReactions';
 import { commands } from './commands';
 import { StreamMonitor } from './streamMonitor';
+import { info, warn, error, debug } from '../utils/logger';
 
 const client = new Client({
   intents: [
@@ -18,7 +19,7 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildPresences, // Required for detecting user activities/streaming
   ],
-  partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
   shards: 'auto', // Automatic guild sharding - Discord calculates optimal shard count
 });
 
@@ -47,23 +48,23 @@ client.once(Events.ClientReady, (c) => {
 
 // Shard-specific events
 client.on(Events.ShardReady, (id: number) => {
-  console.log(`✅ Shard ${id} is ready`);
+  info(`✅ Shard ${id} is ready`);
 });
 
-client.on(Events.ShardDisconnect, (event: CloseEvent, id: number) => {
-  console.log(`⚠️ Shard ${id} disconnected`, event);
+client.on(Events.ShardDisconnect, (event: any, id: number) => {
+  warn(`⚠️ Shard ${id} disconnected: ${String(event)}`);
 });
 
-client.on(Events.ShardError, (error: Error, id: number) => {
-  console.error(`❌ Shard ${id} error:`, error);
+client.on(Events.ShardError, (err: Error, id: number) => {
+  error(`❌ Shard ${id} error:`, err);
 });
 
 client.on(Events.ShardReconnecting, (id: number) => {
-  console.log(`🔄 Shard ${id} reconnecting...`);
+  info(`🔄 Shard ${id} reconnecting...`);
 });
 
 client.on(Events.ShardResume, (id: number, replayed: number) => {
-  console.log(`✅ Shard ${id} resumed (${replayed} events replayed)`);
+  info(`✅ Shard ${id} resumed (${replayed} events replayed)`);
 });
 
 client.on(Events.GuildMemberAdd, guildMemberAddHandler);
@@ -78,21 +79,21 @@ export async function initializeBot() {
   const token = process.env.DISCORD_BOT_TOKEN;
   
   if (!token) {
-    console.error('DISCORD_BOT_TOKEN is not set in environment variables');
+    error('DISCORD_BOT_TOKEN is not set in environment variables');
     return;
   }
 
   try {
     await client.login(token);
-    console.log('Discord bot successfully logged in');
-  } catch (error) {
-    console.error('Failed to login to Discord:', error);
+    info('Discord bot successfully logged in');
+  } catch (err) {
+    error('Failed to login to Discord:', err);
   }
 }
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('Shutting down bot...');
+  info('Shutting down bot...');
   if (streamMonitor) {
     streamMonitor.stop();
   }

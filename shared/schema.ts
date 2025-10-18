@@ -186,94 +186,7 @@ export const gameRecommendations = pgTable("game_recommendations", {
   respondedAt: timestamp("responded_at"),
 });
 
-// Cards Against Humanity Tables
-export const cahWhiteCards = pgTable("cah_white_cards", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  content: text("content").notNull(), // The white card text
-  cardSet: text("card_set").notNull().default("base"), // base, expansion1, custom, server-specific
-  serverId: varchar("server_id").references(() => discordServers.id), // null for official cards, server ID for custom
-  createdBy: varchar("created_by").references(() => discordUsers.id), // User who submitted custom card
-  isApproved: boolean("is_approved").default(false), // For custom cards
-  isActive: boolean("is_active").default(true),
-  usageCount: integer("usage_count").default(0), // Track popularity
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const cahBlackCards = pgTable("cah_black_cards", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  content: text("content").notNull(), // The black card text with placeholders
-  pickCount: integer("pick_count").notNull().default(1), // How many white cards to pick
-  cardSet: text("card_set").notNull().default("base"), // base, expansion1, custom, server-specific
-  serverId: varchar("server_id").references(() => discordServers.id), // null for official cards
-  createdBy: varchar("created_by").references(() => discordUsers.id), // User who submitted custom card
-  isApproved: boolean("is_approved").default(false), // For custom cards
-  isActive: boolean("is_active").default(true),
-  usageCount: integer("usage_count").default(0), // Track popularity
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const cahGames = pgTable("cah_games", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  serverId: varchar("server_id").notNull().references(() => discordServers.id),
-  channelId: varchar("channel_id").notNull(),
-  hostId: varchar("host_id").notNull().references(() => discordUsers.id),
-  gameMessageId: varchar("game_message_id"), // Main game embed message
-  status: text("status").notNull().default("waiting"), // waiting, active, voting, finished, cancelled
-  currentRound: integer("current_round").default(1),
-  maxRounds: integer("max_rounds").default(10),
-  maxPlayers: integer("max_players").default(8),
-  currentJudgeId: varchar("current_judge_id").references(() => discordUsers.id),
-  currentBlackCardId: varchar("current_black_card_id").references(() => cahBlackCards.id),
-  settings: jsonb("settings").default({}), // Game-specific settings
-  gameData: jsonb("game_data").default({}), // Round data, card state, etc.
-  winnerId: varchar("winner_id").references(() => discordUsers.id), // Game winner
-  createdAt: timestamp("created_at").defaultNow(),
-  startedAt: timestamp("started_at"),
-  endedAt: timestamp("ended_at"),
-});
-
-export const cahGamePlayers = pgTable("cah_game_players", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  gameId: varchar("game_id").notNull().references(() => cahGames.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => discordUsers.id),
-  hand: jsonb("hand").default([]), // Array of white card IDs in player's hand
-  score: integer("score").default(0), // Points scored in this game
-  isActive: boolean("is_active").default(true),
-  joinedAt: timestamp("joined_at").defaultNow(),
-  leftAt: timestamp("left_at"),
-}, (table) => ({
-  gamePlayerUnique: unique().on(table.gameId, table.userId),
-}));
-
-export const cahGameSubmissions = pgTable("cah_game_submissions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  gameId: varchar("game_id").notNull().references(() => cahGames.id, { onDelete: "cascade" }),
-  playerId: varchar("player_id").notNull().references(() => cahGamePlayers.id, { onDelete: "cascade" }),
-  round: integer("round").notNull(),
-  whiteCardIds: jsonb("white_card_ids").notNull(), // Array of submitted white card IDs
-  isWinner: boolean("is_winner").default(false),
-  votes: integer("votes").default(0), // For voting-based games
-  submittedAt: timestamp("submitted_at").defaultNow(),
-});
-
-export const cahGameStats = pgTable("cah_game_stats", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => discordUsers.id),
-  serverId: varchar("server_id").references(() => discordServers.id), // null for global stats
-  gamesPlayed: integer("games_played").default(0),
-  gamesWon: integer("games_won").default(0),
-  roundsWon: integer("rounds_won").default(0),
-  roundsJudged: integer("rounds_judged").default(0),
-  favoriteWhiteCard: varchar("favorite_white_card").references(() => cahWhiteCards.id),
-  favoriteBlackCard: varchar("favorite_black_card").references(() => cahBlackCards.id),
-  totalScore: integer("total_score").default(0),
-  averageScore: integer("average_score").default(0),
-  lastPlayedAt: timestamp("last_played_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => ({
-  userServerUnique: unique().on(table.userId, table.serverId),
-}));
+// Cards Against Humanity feature removed. Related tables and types were deleted.
 
 // Relations
 export const discordServersRelations = relations(discordServers, ({ many }) => ({
@@ -286,9 +199,7 @@ export const discordServersRelations = relations(discordServers, ({ many }) => (
   savedEmbeds: many(savedEmbeds),
   gameFavorites: many(gameFavorites),
   gameRecommendations: many(gameRecommendations),
-  cahGames: many(cahGames),
-  customWhiteCards: many(cahWhiteCards),
-  customBlackCards: many(cahBlackCards),
+  // CAH tables removed
 }));
 
 export const discordUsersRelations = relations(discordUsers, ({ many }) => ({
@@ -300,11 +211,7 @@ export const discordUsersRelations = relations(discordUsers, ({ many }) => ({
   gameFavorites: many(gameFavorites),
   gameRecommendations: many(gameRecommendations),
   gameRecommendationsReceived: many(gameRecommendations),
-  hostedCahGames: many(cahGames),
-  cahGamePlayers: many(cahGamePlayers),
-  cahGameStats: many(cahGameStats),
-  createdWhiteCards: many(cahWhiteCards),
-  createdBlackCards: many(cahBlackCards),
+  // CAH tables removed
 }));
 
 export const serverMembersRelations = relations(serverMembers, ({ one }) => ({
@@ -411,95 +318,7 @@ export const gameRecommendationsRelations = relations(gameRecommendations, ({ on
 }));
 
 // Cards Against Humanity Relations
-export const cahWhiteCardsRelations = relations(cahWhiteCards, ({ one, many }) => ({
-  server: one(discordServers, {
-    fields: [cahWhiteCards.serverId],
-    references: [discordServers.id],
-  }),
-  creator: one(discordUsers, {
-    fields: [cahWhiteCards.createdBy],
-    references: [discordUsers.id],
-  }),
-}));
-
-export const cahBlackCardsRelations = relations(cahBlackCards, ({ one, many }) => ({
-  server: one(discordServers, {
-    fields: [cahBlackCards.serverId],
-    references: [discordServers.id],
-  }),
-  creator: one(discordUsers, {
-    fields: [cahBlackCards.createdBy],
-    references: [discordUsers.id],
-  }),
-  games: many(cahGames),
-}));
-
-export const cahGamesRelations = relations(cahGames, ({ one, many }) => ({
-  server: one(discordServers, {
-    fields: [cahGames.serverId],
-    references: [discordServers.id],
-  }),
-  host: one(discordUsers, {
-    fields: [cahGames.hostId],
-    references: [discordUsers.id],
-  }),
-  currentJudge: one(discordUsers, {
-    fields: [cahGames.currentJudgeId],
-    references: [discordUsers.id],
-  }),
-  currentBlackCard: one(cahBlackCards, {
-    fields: [cahGames.currentBlackCardId],
-    references: [cahBlackCards.id],
-  }),
-  winner: one(discordUsers, {
-    fields: [cahGames.winnerId],
-    references: [discordUsers.id],
-  }),
-  players: many(cahGamePlayers),
-  submissions: many(cahGameSubmissions),
-}));
-
-export const cahGamePlayersRelations = relations(cahGamePlayers, ({ one, many }) => ({
-  game: one(cahGames, {
-    fields: [cahGamePlayers.gameId],
-    references: [cahGames.id],
-  }),
-  user: one(discordUsers, {
-    fields: [cahGamePlayers.userId],
-    references: [discordUsers.id],
-  }),
-  submissions: many(cahGameSubmissions),
-}));
-
-export const cahGameSubmissionsRelations = relations(cahGameSubmissions, ({ one }) => ({
-  game: one(cahGames, {
-    fields: [cahGameSubmissions.gameId],
-    references: [cahGames.id],
-  }),
-  player: one(cahGamePlayers, {
-    fields: [cahGameSubmissions.playerId],
-    references: [cahGamePlayers.id],
-  }),
-}));
-
-export const cahGameStatsRelations = relations(cahGameStats, ({ one }) => ({
-  user: one(discordUsers, {
-    fields: [cahGameStats.userId],
-    references: [discordUsers.id],
-  }),
-  server: one(discordServers, {
-    fields: [cahGameStats.serverId],
-    references: [discordServers.id],
-  }),
-  favoriteWhiteCard: one(cahWhiteCards, {
-    fields: [cahGameStats.favoriteWhiteCard],
-    references: [cahWhiteCards.id],
-  }),
-  favoriteBlackCard: one(cahBlackCards, {
-    fields: [cahGameStats.favoriteBlackCard],
-    references: [cahBlackCards.id],
-  }),
-}));
+// CAH relations removed
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -568,37 +387,7 @@ export const insertGameRecommendationSchema = createInsertSchema(gameRecommendat
   createdAt: true,
 });
 
-// Cards Against Humanity Insert Schemas
-export const insertCahWhiteCardSchema = createInsertSchema(cahWhiteCards).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertCahBlackCardSchema = createInsertSchema(cahBlackCards).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertCahGameSchema = createInsertSchema(cahGames).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertCahGamePlayerSchema = createInsertSchema(cahGamePlayers).omit({
-  id: true,
-  joinedAt: true,
-});
-
-export const insertCahGameSubmissionSchema = createInsertSchema(cahGameSubmissions).omit({
-  id: true,
-  submittedAt: true,
-});
-
-export const insertCahGameStatsSchema = createInsertSchema(cahGameStats).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+// CAH insert schemas removed
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -640,21 +429,4 @@ export type GameFavorite = typeof gameFavorites.$inferSelect;
 export type InsertGameRecommendation = z.infer<typeof insertGameRecommendationSchema>;
 export type GameRecommendation = typeof gameRecommendations.$inferSelect;
 
-// Cards Against Humanity Types
-export type InsertCahWhiteCard = z.infer<typeof insertCahWhiteCardSchema>;
-export type CahWhiteCard = typeof cahWhiteCards.$inferSelect;
-
-export type InsertCahBlackCard = z.infer<typeof insertCahBlackCardSchema>;
-export type CahBlackCard = typeof cahBlackCards.$inferSelect;
-
-export type InsertCahGame = z.infer<typeof insertCahGameSchema>;
-export type CahGame = typeof cahGames.$inferSelect;
-
-export type InsertCahGamePlayer = z.infer<typeof insertCahGamePlayerSchema>;
-export type CahGamePlayer = typeof cahGamePlayers.$inferSelect;
-
-export type InsertCahGameSubmission = z.infer<typeof insertCahGameSubmissionSchema>;
-export type CahGameSubmission = typeof cahGameSubmissions.$inferSelect;
-
-export type InsertCahGameStats = z.infer<typeof insertCahGameStatsSchema>;
-export type CahGameStats = typeof cahGameStats.$inferSelect;
+// CAH types removed

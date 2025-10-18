@@ -1,5 +1,6 @@
 import { GuildMember, EmbedBuilder, TextChannel, PartialGuildMember } from 'discord.js';
 import { storage } from '../../storage';
+import { info, error } from '../../utils/logger';
 
 export async function guildMemberRemoveHandler(member: GuildMember | PartialGuildMember) {
   try {
@@ -16,13 +17,13 @@ export async function guildMemberRemoveHandler(member: GuildMember | PartialGuil
     });
 
     // Send leave message if enabled in server settings
-    const showLeaveMessages = server.settings?.showLeaveMessages !== false; // Default to true
+  const showLeaveMessages = (server as any).settings?.showLeaveMessages !== false; // Default to true
     
     if (showLeaveMessages) {
       const channel = member.guild.channels.cache.get(server.welcomeChannelId) as TextChannel;
       
       if (channel) {
-        const leaveMessage = server.settings?.leaveMessage || 
+  const leaveMessage = (server as any).settings?.leaveMessage ||
           `**{username}** has left the server. We'll miss you!`;
 
         // Replace placeholders
@@ -53,8 +54,9 @@ export async function guildMemberRemoveHandler(member: GuildMember | PartialGuil
       memberCount: member.guild.memberCount,
     });
 
-    console.log(`Member left ${member.guild.name}: ${member.user?.tag || 'Unknown User'}`);
+    info(`Member left ${member.guild.name}: ${member.user?.tag || 'Unknown User'}`);
   } catch (error) {
-    console.error('Error handling guild member remove:', error);
+    const { error: logError } = await import('../../utils/logger');
+    logError('Error handling guild member remove:', error);
   }
 }

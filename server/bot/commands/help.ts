@@ -17,7 +17,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       },
       {
         name: '🎮 Games & Fun',
-        value: '`/games` - Play games like trivia, number guess, word scramble\n`/cah` - Play Cards Against Humanity\n`/cahadmin` - Manage CAH games (admin only)',
+        value: '`/games` - Play games like trivia, number guess, word scramble',
         inline: false
       },
       {
@@ -132,7 +132,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       },
       {
         name: '🎲 Games',
-        value: '• Trivia questions with multiple difficulties\n• Number guessing game (1-100)\n• Word scramble challenges\n• Cards Against Humanity (multiplayer)',
+        value: '• Trivia questions with multiple difficulties\n• Number guessing game (1-100)\n• Word scramble challenges',
         inline: false
       },
       {

@@ -8,6 +8,7 @@ import {
   ComponentType,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder
+  , ButtonInteraction
 } from 'discord.js';
 import { gameAPI, GameData, GameScreenshot } from '../../utils/gameAPI';
 
@@ -293,14 +294,14 @@ async function showGameDetails(interaction: ChatInputCommandInteraction, game: G
 
     // Genres and developers
     const gameDetails: string[] = [];
-    if (gameInfo.genres && gameInfo.genres.length > 0) {
-      gameDetails.push(`**🎯 Genres:** ${gameInfo.genres.slice(0, 3).map(g => g.name || g).join(', ')}`);
+    if (gameInfo.genres && (gameInfo.genres as any[]).length > 0) {
+      gameDetails.push(`**🎯 Genres:** ${(gameInfo.genres as any[]).slice(0, 3).map((g: any) => g.name || g).join(', ')}`);
     }
-    if (gameInfo.developers && gameInfo.developers.length > 0) {
-      gameDetails.push(`**👥 Developers:** ${gameInfo.developers.slice(0, 2).map(d => d.name || d).join(', ')}`);
+    if (gameInfo.developers && (gameInfo.developers as any[]).length > 0) {
+      gameDetails.push(`**👥 Developers:** ${(gameInfo.developers as any[]).slice(0, 2).map((d: any) => d.name || d).join(', ')}`);
     }
-    if (gameInfo.publishers && gameInfo.publishers.length > 0) {
-      gameDetails.push(`**🏢 Publishers:** ${gameInfo.publishers.slice(0, 2).map(p => p.name || p).join(', ')}`);
+    if (gameInfo.publishers && (gameInfo.publishers as any[]).length > 0) {
+      gameDetails.push(`**🏢 Publishers:** ${(gameInfo.publishers as any[]).slice(0, 2).map((p: any) => p.name || p).join(', ')}`);
     }
     if (gameInfo.playtime) {
       gameDetails.push(`**⏱️ Avg. Playtime:** ${gameInfo.playtime} hours`);
@@ -311,8 +312,8 @@ async function showGameDetails(interaction: ChatInputCommandInteraction, game: G
     }
 
     // Description/Synopsis
-    if (gameInfo.description_raw || gameInfo.description || gameInfo.synopsis) {
-      const description = gameInfo.description_raw || gameInfo.description || gameInfo.synopsis;
+    if ((gameInfo as any).description_raw || gameInfo.description || gameInfo.synopsis) {
+      const description = (gameInfo as any).description_raw || gameInfo.description || gameInfo.synopsis;
       const truncatedDesc = description.length > 500 
         ? description.substring(0, 497) + '...'
         : description;
@@ -410,8 +411,8 @@ async function showGameDetails(interaction: ChatInputCommandInteraction, game: G
         time: 300000 // 5 minutes
       });
 
-      collector?.on('collect', async (buttonInteraction) => {
-        await showGameScreenshots(buttonInteraction, gameInfo, screenshots);
+      collector?.on('collect', async (buttonInteraction: any) => {
+        await showGameScreenshots(buttonInteraction as any, gameInfo as any, screenshots as any);
       });
     }
   } catch (error) {
@@ -506,7 +507,7 @@ async function showGameScreenshots(interaction: any, game: GameData, screenshots
     time: 300000 // 5 minutes
   });
 
-  collector.on('collect', async (buttonInteraction) => {
+  collector.on('collect', async (buttonInteraction: ButtonInteraction) => {
     if (buttonInteraction.user.id !== interaction.user.id) {
       await buttonInteraction.reply({
         content: '❌ You cannot control this screenshot viewer.',

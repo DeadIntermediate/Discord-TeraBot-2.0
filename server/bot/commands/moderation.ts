@@ -286,8 +286,8 @@ const jailCommand = {
 
       // Get server settings for jail role and channel
       const server = await storage.getDiscordServer(interaction.guild.id);
-      const jailRoleId = server?.settings?.jailRoleId;
-      const jailChannelId = server?.settings?.jailChannelId;
+  const jailRoleId = (server as any)?.settings?.jailRoleId;
+  const jailChannelId = (server as any)?.settings?.jailChannelId;
 
       if (!jailRoleId) {
         await interaction.reply({ 
@@ -405,7 +405,7 @@ const unjailCommand = {
       
       // Get server settings for jail role
       const server = await storage.getDiscordServer(interaction.guild.id);
-      const jailRoleId = server?.settings?.jailRoleId;
+  const jailRoleId = (server as any)?.settings?.jailRoleId;
 
       if (!jailRoleId) {
         await interaction.reply({ 
@@ -574,7 +574,7 @@ const modHistoryCommand = {
           clear: '🧹'
         }[log.action] || '📝';
 
-        const dateStr = new Date(log.createdAt).toLocaleDateString();
+  const dateStr = new Date(log.createdAt ?? Date.now()).toLocaleDateString();
         return `${actionEmoji} **${log.action.toUpperCase()}** - ${log.reason} (${dateStr})`;
       }).join('\n');
 

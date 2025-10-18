@@ -2,6 +2,7 @@
  * Environment Variable Validator
  * Validates required environment variables and provides helpful error messages
  */
+import { info, warn, error } from './logger';
 
 interface ValidationResult {
   isValid: boolean;
@@ -22,12 +23,15 @@ export function validateEnvironment(): ValidationResult {
     DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN
   };
 
+  const skipDb = process.env.SKIP_DB === 'true';
+  const skipDiscord = process.env.SKIP_DISCORD === 'true';
+
   // Validate DATABASE_URL
-  if (!requiredVars.DATABASE_URL) {
+  if (!requiredVars.DATABASE_URL && !skipDb) {
     result.isValid = false;
     result.errors.push('DATABASE_URL is not set');
     result.errors.push('Set it to: postgresql://username:password@host:port/database');
-  } else {
+  } else if (requiredVars.DATABASE_URL) {
     // Validate DATABASE_URL format
     const dbUrlPattern = /^postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/([^?]+)/;
     if (!dbUrlPattern.test(requiredVars.DATABASE_URL)) {
@@ -38,11 +42,11 @@ export function validateEnvironment(): ValidationResult {
   }
 
   // Validate DISCORD_BOT_TOKEN
-  if (!requiredVars.DISCORD_BOT_TOKEN) {
+  if (!requiredVars.DISCORD_BOT_TOKEN && !skipDiscord) {
     result.isValid = false;
     result.errors.push('DISCORD_BOT_TOKEN is not set');
     result.errors.push('Get your bot token from https://discord.com/developers/applications');
-  } else {
+  } else if (requiredVars.DISCORD_BOT_TOKEN) {
     // Basic token format validation
     if (requiredVars.DISCORD_BOT_TOKEN.length < 50) {
       result.warnings.push('DISCORD_BOT_TOKEN seems too short - verify it is correct');
@@ -67,25 +71,25 @@ export function validateEnvironment(): ValidationResult {
 }
 
 export function displayValidationResults(result: ValidationResult): void {
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🔍 ENVIRONMENT VARIABLE VALIDATION');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  info('🔍 ENVIRONMENT VARIABLE VALIDATION');
+  info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   if (result.isValid) {
-    console.log('✅ All required environment variables are set correctly');
+    info('✅ All required environment variables are set correctly');
   } else {
-    console.log('❌ Environment validation failed:');
-    result.errors.forEach(error => {
-      console.log(`   • ${error}`);
+    error('❌ Environment validation failed:');
+    result.errors.forEach(err => {
+      error(`   • ${err}`);
     });
   }
 
   if (result.warnings.length > 0) {
-    console.log('\n⚠️  Warnings:');
+    warn('\n⚠️  Warnings:');
     result.warnings.forEach(warning => {
-      console.log(`   • ${warning}`);
+      warn(`   • ${warning}`);
     });
   }
 
-  console.log('');
+  info('');
 }

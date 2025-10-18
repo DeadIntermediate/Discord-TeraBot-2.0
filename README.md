@@ -23,7 +23,7 @@ TeraBot 2.0 acts as a bridge between Discord, TeamSpeak 3, and the Minecraft net
 - Giveaway system for digital rewards (gift cards, game keys, etc.)
 - Stream notifications for Twitch, YouTube, Kick, or TikTok
 - Custom embed creator directly within Discord
-- **Cards Against Humanity** - Full multiplayer party game with custom cards
+- (Removed) Full multiplayer party game feature
 
 ### 🎮 Game Integration
 - Real-time Minecraft server status embeds (auto-refresh every 3–5 minutes)
@@ -45,47 +45,7 @@ TeraBot 2.0 acts as a bridge between Discord, TeamSpeak 3, and the Minecraft net
 
 ---
 
-## 🃏 Cards Against Humanity
-
-### 🎮 Game Features
-- **Multiplayer Support:** 3-10 players per game with real-time gameplay
-- **Interactive Discord UI:** Rich embeds with buttons for seamless card selection
-- **Multiple Card Sets:** Base game, family-friendly, gaming-themed, community, and mature (18+) packs
-- **Custom Cards:** Server admins can add custom white and black cards
-- **Game Statistics:** Track wins, games played, and server leaderboards
-- **Family Mode:** Toggle between family-friendly and full content per server
-
-### 🎯 Player Commands
-- `/cah create` - Start a new game in the current channel
-- `/cah join` - Join an existing game lobby
-- `/cah leave` - Leave the current game
-- `/cah play` - Submit your white card(s) during gameplay
-- `/cah hand` - View your current hand of cards (private)
-- `/cah status` - Check current game status and scores
-- `/cah rules` - Display game rules and help
-- `/cah stats` - View your personal statistics
-
-### 🛠️ Admin Commands
-- `/cahadmin cards seed` - Initialize official card database
-- `/cahadmin cards add-white/add-black` - Add custom server cards
-- `/cahadmin cards list/remove` - Manage custom cards
-- `/cahadmin games list/force-end` - Monitor active games
-- `/cahadmin settings family-mode` - Toggle content filtering
-- `/cahadmin settings max-games` - Limit concurrent games per server
-
-### 📊 Card Statistics
-- **200+ Official Cards** from the base Cards Against Humanity set
-- **70+ Additional Cards** across family, gaming, and community themes
-- **45+ Mature Cards** for 18+ servers with adult humor
-- **Custom Card Support** with approval system for server-specific content
-
-### 🚀 Quick Setup
-1. Run database migration: `npm run db:push`
-2. Seed official cards: `/cahadmin cards seed`
-3. Configure server settings: `/cahadmin settings family-mode true/false`
-4. Start playing: `/cah create` in any text channel!
-
-For detailed setup instructions, see `CARDS_AGAINST_HUMANITY.md`
+<!-- Cards Against Humanity feature removed -->
 
 ---
 
@@ -237,7 +197,7 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
 - **Development Host:** Raspberry Pi  
 - **Production Host:** VPS (Debian-based)
 - **Database:** PostgreSQL with Drizzle ORM
-- **Game Engine:** Custom multiplayer logic for Cards Against Humanity
+- **Game Engine:** Custom multiplayer logic (game-specific engines are optional)
 - **Process Management:** tmux + systemd
 - **Auto-Restart Script:** retries 3 times, sends alert if persistent failure
 - **Version Control:** GitHub (`Discord-TeraBot-2.0`)
@@ -279,9 +239,60 @@ Its goal is to make managing servers easier, more interactive, and more data-dri
 
 ---
 
+## 🗂️ Migrations
+
+If you removed the Cards Against Humanity (CAH) feature and need to remove related database objects, there's a migration script included that can either move CAH tables to a backup schema or drop them entirely.
+
+- File: `migrations/20251018_remove_cah_with_log.sql`
+- Usage (psql):
+	- Safe (rename/move to backup schema):
+		- Set the target schema and action inside your psql session:
+			- `SELECT set_config('app.cah_target_schema','<SCHEMA_NAME>', false);`
+			- `SELECT set_config('app.cah_migration_action','rename', false);`
+		- Run the migration file:
+			- `\i migrations/20251018_remove_cah_with_log.sql`
+
+	- Destructive (DROP tables) — make a backup first and use with caution:
+		- `SELECT set_config('app.cah_target_schema','<SCHEMA_NAME>', false);`
+		- `SELECT set_config('app.cah_migration_action','drop', false);`
+		- `\i migrations/20251018_remove_cah_with_log.sql`
+
+The migration writes detailed action logs to `public.schema_migration_log` (created automatically) so you can audit what changed. Back up your database before running any destructive operation.
+
+
 **Author:** Josh (DeadIntermediate / RealDeadIntermed)  
 **Network:** [Terabyte Gaming Network](https://terabytegaming.net) *(Placeholder link)*  
 **Language:** Node.js (Discord.js)  
-**Version:** `2.1.0-dev` *(Added Cards Against Humanity)*
+**Version:** `2.1.0-dev`
 
 ---
+
+## 🔁 Dev vs Production — Quick Guide
+
+This project requires a valid `RAWG_API_KEY` for live `/game` lookups. There is no mock fallback in this repository; provide the key in your environment for production use.
+
+Key environment flags:
+
+- `RAWG_API_KEY` — required for live `/game` lookups. If missing the server will log an error and the game APIs will throw to avoid silent failures.
+- `SKIP_DB=true` — start the server without connecting to the database (dev convenience).
+- `SKIP_DISCORD=true` — start the server without connecting to Discord (dev convenience).
+
+How to run locally (connect to Discord and DB as needed):
+
+```bash
+# load local .env (if present)
+set -o allexport
+[ -f .env ] && source .env || true
+set +o allexport
+
+npm run dev
+```
+
+Notes:
+- Ensure `RAWG_API_KEY` is set when you want `/game` to return live data.
+- Use `SKIP_DB=true` and/or `SKIP_DISCORD=true` for local testing when you don't want to connect to those services.
+
+Testing `/game` command:
+- Live: set `RAWG_API_KEY` and restart. `/game` will use RAWG to return data and screenshots.
+
+If you want, I can add a dedicated `DEV_MODE` on a separate dev/test branch and a test-bot that registers commands only to a specified test guild to avoid polluting global application commands.

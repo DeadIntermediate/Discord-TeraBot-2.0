@@ -427,7 +427,7 @@ async function handleList(interaction: ChatInputCommandInteraction) {
   for (const [platform, platformStreams] of Object.entries(grouped)) {
     if (platformStreams.length === 0) continue;
 
-    const streamList = platformStreams.map(s => {
+    const streamList = platformStreams.map((s: any) => {
       const status = s.isLive ? '🔴 LIVE' : '⚫ Offline';
       const user = s.userId ? `<@${s.userId}>` : '';
       return `${status} **${s.username}** ${user}`;

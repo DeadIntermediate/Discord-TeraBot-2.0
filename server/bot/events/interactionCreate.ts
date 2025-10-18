@@ -50,6 +50,8 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
       return;
     }
 
+    // CAH feature removed — no routing necessary
+
     if (customId.startsWith('ticket_close_')) {
       await handleTicketClose(interaction);
     } else if (customId.startsWith('ticket_assign_')) {
@@ -107,6 +109,8 @@ async function handleSelectMenuInteraction(interaction: any) {
       await handleEmbedBuilderInteraction(interaction);
       return;
     }
+
+    // CAH feature removed — no routing necessary
 
     // Handle other select menus here
   } catch (error) {

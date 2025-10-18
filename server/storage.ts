@@ -56,6 +56,8 @@ export interface IStorage {
   getRoleReaction(messageId: string, emoji: string): Promise<RoleReaction | undefined>;
   getMessageRoleReactions(messageId: string): Promise<RoleReaction[]>;
   deleteRoleReaction(id: string): Promise<boolean>;
+  // Embed templates
+  createSavedEmbed(embed: { serverId: string; name: string; embedData: any; createdBy: string; }): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -167,10 +169,10 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(moderationLogs.createdAt));
     
     if (serverId) {
-      return await query.where(and(eq(moderationLogs.targetUserId, userId), eq(moderationLogs.serverId, serverId)));
+      return await (query as any).where(and(eq(moderationLogs.targetUserId, userId), eq(moderationLogs.serverId, serverId)));
     }
     
-    return await query;
+    return await (query as any);
   }
 
   // Ticket methods
@@ -196,10 +198,10 @@ export class DatabaseStorage implements IStorage {
     const query = db.select().from(tickets).where(eq(tickets.serverId, serverId));
     
     if (status) {
-      return await query.where(and(eq(tickets.serverId, serverId), eq(tickets.status, status)));
+      return await (query as any).where(and(eq(tickets.serverId, serverId), eq(tickets.status, status)));
     }
     
-    return await query.orderBy(desc(tickets.createdAt));
+    return await (query as any).orderBy(desc(tickets.createdAt));
   }
 
   // Giveaway methods
@@ -227,10 +229,10 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(giveaways.endsAt));
     
     if (serverId) {
-      return await query.where(and(eq(giveaways.isActive, true), eq(giveaways.serverId, serverId)));
+      return await (query as any).where(and(eq(giveaways.isActive, true), eq(giveaways.serverId, serverId)));
     }
     
-    return await query;
+    return await (query as any);
   }
 
   async getExpiredGiveaways(): Promise<Giveaway[]> {
@@ -258,6 +260,12 @@ export class DatabaseStorage implements IStorage {
   async deleteRoleReaction(id: string): Promise<boolean> {
     const result = await db.delete(roleReactions).where(eq(roleReactions.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Embed templates (placeholder implementation)
+  async createSavedEmbed(embed: { serverId: string; name: string; embedData: any; createdBy: string; }): Promise<any> {
+    // Placeholder: store nothing; return the provided object with an id and createdAt
+    return { id: `embed_${Date.now()}`, ...embed, createdAt: new Date() };
   }
 }
 

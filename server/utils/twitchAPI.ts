@@ -1,5 +1,7 @@
-// Missing Twitch API implementation
-import axios from 'axios';
+// Twitch API implementation using global fetch to avoid adding axios as a dependency.
+
+// Note: Node 18+ provides global `fetch`. If running on older Node versions,
+// ensure a global fetch polyfill is available.
 
 interface TwitchOAuthResponse {
   access_token: string;
@@ -47,22 +49,26 @@ export class TwitchAPI {
     }
 
     try {
-      const response = await axios.post<TwitchOAuthResponse>(
-        'https://id.twitch.tv/oauth2/token',
-        new URLSearchParams({
+      const tokenResp = await fetch('https://id.twitch.tv/oauth2/token', {
+        method: 'POST',
+        body: new URLSearchParams({
           client_id: this.clientId,
           client_secret: this.clientSecret,
           grant_type: 'client_credentials'
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
+        }).toString(),
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
         }
-      );
+      });
 
-      this.accessToken = response.data.access_token;
-      this.tokenExpiresAt = Date.now() + (response.data.expires_in * 1000) - 60000; // 1 min buffer
+      if (!tokenResp.ok) {
+        const text = await tokenResp.text();
+        throw new Error(`Twitch token request failed: ${tokenResp.status} ${text}`);
+      }
+
+      const data = (await tokenResp.json()) as TwitchOAuthResponse;
+      this.accessToken = data.access_token;
+      this.tokenExpiresAt = Date.now() + (data.expires_in * 1000) - 60000; // 1 min buffer
 
       return this.accessToken;
     } catch (error) {
@@ -85,21 +91,24 @@ export class TwitchAPI {
     try {
       const accessToken = await this.getAccessToken();
       
-      const response = await axios.get<TwitchStreamResponse>(
-        `https://api.twitch.tv/helix/streams?user_login=${username}`,
-        {
-          headers: {
-            'Client-ID': this.clientId,
-            'Authorization': `Bearer ${accessToken}`
-          }
+      const streamResp = await fetch(`https://api.twitch.tv/helix/streams?user_login=${username}`, {
+        headers: {
+          'Client-ID': this.clientId,
+          'Authorization': `Bearer ${accessToken}`
         }
-      );
+      });
 
-      if (response.data.data.length === 0) {
+      if (!streamResp.ok) {
+        const text = await streamResp.text();
+        throw new Error(`Twitch streams request failed: ${streamResp.status} ${text}`);
+      }
+
+      const streamData = (await streamResp.json()) as TwitchStreamResponse;
+      if (!streamData.data || streamData.data.length === 0) {
         return { isLive: false };
       }
 
-      const stream = response.data.data[0];
+      const stream = streamData.data[0];
       return {
         isLive: true,
         title: stream.title,

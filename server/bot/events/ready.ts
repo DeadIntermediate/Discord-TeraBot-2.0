@@ -1,101 +1,102 @@
 import { Client, Events } from 'discord.js';
 import { storage } from '../../storage';
 import { pool } from '../../db';
+import { info, debug, warn, error } from '../../utils/logger';
 
 export async function readyHandler(client: Client) {
-  // ASCII Art Banner
-  console.log('\n');
-  console.log('╔══════════════════════════════════════════════════════╗');
-  console.log('║                                                      ║');
-  console.log('║                     TERA BOT                         ║');
-  console.log('║                                                      ║');
-  console.log('║            Discord Bot v2.0 - Node.js                ║');
-  console.log('║                                                      ║');
-  console.log('╚══════════════════════════════════════════════════════╝');
-  console.log('\n');
-  
-  console.log('🚀 Starting Tera Bot initialization...\n');
-  
+  // ASCII Art Banner (debug-only)
+  debug('\n');
+  debug('╔══════════════════════════════════════════════════════╗');
+  debug('║                                                      ║');
+  debug('║                     TERA BOT                         ║');
+  debug('║                                                      ║');
+  debug('║            Discord Bot v2.0 - Node.js                ║');
+  debug('║                                                      ║');
+  debug('╚══════════════════════════════════════════════════════╝');
+  debug('\n');
+
+  info('🚀 Starting Tera Bot initialization...\n');
+
   // Test Database Connection (additional verification)
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('📊 DATABASE CONNECTION VERIFICATION');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  debug('📊 DATABASE CONNECTION VERIFICATION');
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   try {
     const testConnection = await pool.query('SELECT NOW()');
-    console.log('✅ PostgreSQL connection verified in bot ready handler');
-    console.log(`🕐 Database time: ${testConnection.rows[0].now}`);
-  } catch (error) {
-    console.error('❌ PostgreSQL connection verification failed in ready handler:', error);
-    console.error('⚠️ Bot may experience issues with database-dependent features');
+    info('✅ PostgreSQL connection verified in bot ready handler');
+    debug(`🕐 Database time: ${testConnection.rows[0].now}`);
+  } catch (err) {
+    error('❌ PostgreSQL connection verification failed in ready handler:', err);
+    warn('⚠️ Bot may experience issues with database-dependent features');
   }
-  console.log('');
-  
+  debug('');
+
   // Bot Information
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🤖 BOT INFORMATION');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`✅ Logged in as: ${client.user?.tag}`);
-  console.log(`🆔 Bot ID: ${client.user?.id}`);
-  console.log(`📅 Account Created: ${client.user?.createdAt.toLocaleDateString()}`);
-  console.log('');
-  
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  debug('🤖 BOT INFORMATION');
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  info(`✅ Logged in as: ${client.user?.tag}`);
+  debug(`🆔 Bot ID: ${client.user?.id}`);
+  debug(`📅 Account Created: ${client.user?.createdAt.toLocaleDateString()}`);
+  debug('');
+
   // Sharding Information
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🔀 SHARDING INFORMATION');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  debug('🔀 SHARDING INFORMATION');
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   if (client.shard) {
-    console.log(`📊 Current Shard ID(s): ${client.shard.ids.join(', ')}`);
-    console.log(`📊 Total Shards: ${client.shard.count}`);
-    console.log('✅ Auto-sharding enabled');
+    debug(`📊 Current Shard ID(s): ${client.shard.ids.join(', ')}`);
+    debug(`📊 Total Shards: ${client.shard.count}`);
+    debug('✅ Auto-sharding enabled');
   } else {
-    console.log('📊 Running without sharding (single instance)');
+    debug('📊 Running without sharding (single instance)');
   }
-  console.log('');
-  
+  debug('');
+
   // Guild Statistics
   const totalMembers = client.guilds.cache.reduce((acc: number, guild: any) => acc + guild.memberCount, 0);
   const totalChannels = client.guilds.cache.reduce((acc: number, guild: any) => acc + guild.channels.cache.size, 0);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🌐 GUILD STATISTICS');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`🏰 Total Guilds: ${client.guilds.cache.size}`);
-  console.log(`👥 Total Members: ${totalMembers.toLocaleString()}`);
-  console.log(`📺 Total Channels: ${totalChannels.toLocaleString()}`);
-  console.log('');
-  
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  debug('🌐 GUILD STATISTICS');
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  info(`🏰 Total Guilds: ${client.guilds.cache.size}`);
+  info(`👥 Total Members: ${totalMembers.toLocaleString()}`);
+  info(`📺 Total Channels: ${totalChannels.toLocaleString()}`);
+  debug('');
+
   // Register slash commands globally
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('📝 COMMAND REGISTRATION');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  debug('📝 COMMAND REGISTRATION');
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   try {
     const commands = (client as any).commands;
     const commandData = Array.from(commands.values()).map((command: any) => command.data.toJSON());
-    
+
     await client.application?.commands.set(commandData);
-    console.log(`✅ Successfully registered ${commandData.length} application commands`);
-    console.log(`📋 Commands: ${commandData.map((cmd: any) => cmd.name).join(', ')}`);
-  } catch (error) {
-    console.error('❌ Error registering slash commands:', error);
+    info(`✅ Successfully registered ${commandData.length} application commands`);
+    debug(`📋 Commands: ${commandData.map((cmd: any) => cmd.name).join(', ')}`);
+  } catch (err) {
+    error('❌ Error registering slash commands:', err);
   }
-  console.log('');
+  debug('');
 
   // Set bot activity
   client.user?.setActivity('Discord servers', { type: 3 }); // Type 3 = Watching
-  
+
   // Initialize servers in database
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('� DATABASE SYNCHRONIZATION');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🔄 Synchronizing guild data with database...');
-  
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  debug('📦 DATABASE SYNCHRONIZATION');
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  info('🔄 Synchronizing guild data with database...');
+
   let initialized = 0;
   let updated = 0;
   let errors = 0;
-  
-  for (const guild of client.guilds.cache.values()) {
+
+  for (const guild of Array.from(client.guilds.cache.values())) {
     try {
       const existingServer = await storage.getDiscordServer(guild.id);
-      
+
       if (!existingServer) {
         await storage.createDiscordServer({
           id: guild.id,
@@ -113,25 +114,25 @@ export async function readyHandler(client: Client) {
         });
         updated++;
       }
-    } catch (error) {
-      console.error(`❌ Error syncing guild ${guild.name}:`, error);
+    } catch (err) {
+      error(`❌ Error syncing guild ${guild.name}:`, err);
       errors++;
     }
   }
-  
-  console.log(`✅ Database sync complete!`);
-  console.log(`   ├─ New guilds added: ${initialized}`);
-  console.log(`   ├─ Existing guilds updated: ${updated}`);
-  console.log(`   └─ Errors: ${errors}`);
-  console.log('');
-  
+
+  info(`✅ Database sync complete!`);
+  info(`   ├─ New guilds added: ${initialized}`);
+  info(`   ├─ Existing guilds updated: ${updated}`);
+  info(`   └─ Errors: ${errors}`);
+  debug('');
+
   // Final startup message
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('✨ TERA BOT IS READY!');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🚀 All systems operational');
-  console.log('🎮 Watching for commands and events');
-  console.log(`⏰ Ready at: ${new Date().toLocaleString()}`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('\n');
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  info('✨ TERA BOT IS READY!');
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  info('🚀 All systems operational');
+  info('🎮 Watching for commands and events');
+  info(`⏰ Ready at: ${new Date().toLocaleString()}`);
+  debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  debug('\n');
 }

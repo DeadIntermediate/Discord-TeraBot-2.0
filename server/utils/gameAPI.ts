@@ -90,15 +90,17 @@ class GameAPIService {
   // Simple in-memory cache (in production, use Redis or similar)
   private cache = new Map<string, { data: any; timestamp: number }>();
   private readonly CACHE_TTL = 3600000; // 1 hour in milliseconds
+  private readonly missingApiKey: boolean;
 
   constructor() {
     this.RAWG_API_KEY = process.env.RAWG_API_KEY || '';
     this.IGDB_CLIENT_ID = process.env.IGDB_CLIENT_ID || '';
     this.IGDB_ACCESS_TOKEN = process.env.IGDB_ACCESS_TOKEN || '';
-    
-    if (!this.RAWG_API_KEY) {
-      console.warn('⚠️ RAWG API key not configured. Some features may be limited.');
-      console.log('💡 Get a free API key at: https://rawg.io/apidocs');
+    // Require RAWG API key for live lookups. No mock fallback in this bot.
+    this.missingApiKey = !this.RAWG_API_KEY;
+    if (this.missingApiKey) {
+      console.error('❌ RAWG API key is missing. This bot requires RAWG_API_KEY in the environment for live game lookups.');
+      console.error('💡 Get a free API key at: https://rawg.io/apidocs');
     }
   }
 
@@ -121,6 +123,9 @@ class GameAPIService {
     const cacheKey = `search_${query}_${page}_${pageSize}`;
     const cached = this.getCachedData(cacheKey);
     if (cached) return cached;
+    if (this.missingApiKey) {
+      throw new Error('RAWG_API_KEY is required for game lookups. Set RAWG_API_KEY in environment.');
+    }
 
     try {
       const url = new URL(`${this.RAWG_BASE_URL}/games`);
@@ -153,6 +158,9 @@ class GameAPIService {
     const cacheKey = `game_${gameId}`;
     const cached = this.getCachedData(cacheKey);
     if (cached) return cached;
+    if (this.missingApiKey) {
+      throw new Error('RAWG_API_KEY is required for game lookups. Set RAWG_API_KEY in environment.');
+    }
 
     try {
       const url = new URL(`${this.RAWG_BASE_URL}/games/${gameId}`);
@@ -185,6 +193,9 @@ class GameAPIService {
     const cacheKey = `screenshots_${gameId}`;
     const cached = this.getCachedData(cacheKey);
     if (cached) return cached;
+    if (this.missingApiKey) {
+      throw new Error('RAWG_API_KEY is required for game screenshots. Set RAWG_API_KEY in environment.');
+    }
 
     try {
       const url = new URL(`${this.RAWG_BASE_URL}/games/${gameId}/screenshots`);
@@ -215,6 +226,9 @@ class GameAPIService {
     const cacheKey = `random_${count}`;
     const cached = this.getCachedData(cacheKey);
     if (cached) return cached;
+    if (this.missingApiKey) {
+      throw new Error('RAWG_API_KEY is required for random games. Set RAWG_API_KEY in environment.');
+    }
 
     try {
       const url = new URL(`${this.RAWG_BASE_URL}/games`);
@@ -251,6 +265,9 @@ class GameAPIService {
     const cacheKey = `trending_${count}`;
     const cached = this.getCachedData(cacheKey);
     if (cached) return cached;
+    if (this.missingApiKey) {
+      throw new Error('RAWG_API_KEY is required for trending games. Set RAWG_API_KEY in environment.');
+    }
 
     try {
       const currentYear = new Date().getFullYear();

@@ -1,5 +1,6 @@
 import { GuildMember, EmbedBuilder, TextChannel } from 'discord.js';
 import { storage } from '../../storage';
+import { info, error } from '../../utils/logger';
 
 export async function guildMemberAddHandler(member: GuildMember) {
   try {
@@ -47,7 +48,7 @@ export async function guildMemberAddHandler(member: GuildMember) {
       // Check account age for potential security warnings
       const accountAge = Date.now() - member.user.createdAt.getTime();
       const accountAgeDays = Math.floor(accountAge / (1000 * 60 * 60 * 24));
-      const minAccountAge = server.settings?.minAccountAgeDays || 0;
+      const minAccountAge = (server as any).settings?.minAccountAgeDays || 0;
       
       let accountAgeWarning = '';
       if (minAccountAge > 0 && accountAgeDays < minAccountAge) {
@@ -73,7 +74,7 @@ export async function guildMemberAddHandler(member: GuildMember) {
       }
 
       // Add custom fields from server settings
-      const customFields = server.settings?.welcomeFields;
+      const customFields = (server as any).settings?.welcomeFields;
       if (customFields && Array.isArray(customFields)) {
         customFields.forEach(field => {
           if (field.name && field.value) {
@@ -87,7 +88,7 @@ export async function guildMemberAddHandler(member: GuildMember) {
       }
 
       await channel.send({ 
-        content: server.settings?.pingOnWelcome ? member.toString() : undefined,
+  content: (server as any).settings?.pingOnWelcome ? member.toString() : undefined,
         embeds: [embed] 
       });
     }
@@ -97,8 +98,9 @@ export async function guildMemberAddHandler(member: GuildMember) {
       memberCount: member.guild.memberCount,
     });
 
-    console.log(`New member joined ${member.guild.name}: ${member.user.tag}`);
+    info(`New member joined ${member.guild.name}: ${member.user.tag}`);
   } catch (error) {
-    console.error('Error handling guild member add:', error);
+    const { error: logError } = await import('../../utils/logger');
+    logError('Error handling guild member add:', error);
   }
 }

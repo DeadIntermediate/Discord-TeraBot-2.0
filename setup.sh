@@ -317,15 +317,12 @@ show_post_install_instructions() {
     print_status "3. Run: npm run dev (to start in development mode)" "$YELLOW"
     print_status "4. Or run: npm start (to start in production mode)" "$YELLOW"
     echo ""
-    print_status "🎮 Cards Against Humanity Setup:" "$BLUE"
-    print_status "1. Use /cahadmin cards seed to initialize cards" "$YELLOW"
-    print_status "2. Use /cahadmin settings family-mode to configure content" "$YELLOW"
-    print_status "3. Use /cah create to start your first game!" "$YELLOW"
+    # Feature-specific docs removed
     echo ""
     print_status "📚 Documentation:" "$BLUE"
     print_status "- README.md - General bot information" "$YELLOW"
     print_status "- DEPLOYMENT.md - Deployment instructions" "$YELLOW"
-    print_status "- CARDS_AGAINST_HUMANITY.md - CAH game documentation" "$YELLOW"
+    # CAH doc removed (was deleted)
     echo ""
     print_status "❓ Need help? Check the troubleshooting section in README.md" "$BLUE"
 }

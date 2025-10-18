@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { insertDiscordServerSchema, insertModerationLogSchema } from "@shared/schema";
 import { z } from "zod";
 import { botController } from "./botControl";
+import { info, debug, warn, error } from './utils/logger';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Discord server routes
@@ -232,7 +233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
   wss.on('connection', (ws: WebSocket) => {
-    console.log('Client connected to WebSocket');
+    info('WebSocket client connected');
 
     ws.on('message', (message: string) => {
       try {
@@ -252,13 +253,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ws.send(JSON.stringify({ type: 'heartbeat_ack' }));
             break;
         }
-      } catch (error) {
-        console.error('WebSocket message error:', error);
+      } catch (err) {
+        error('WebSocket message error:', err);
       }
     });
 
     ws.on('close', () => {
-      console.log('Client disconnected from WebSocket');
+      info('WebSocket client disconnected');
     });
 
     // Send welcome message

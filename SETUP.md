@@ -65,7 +65,7 @@ chmod +x setup.sh
 
 ### 5. **Database Migration**
 - ✅ Run Drizzle ORM migrations
-- ✅ Create all required tables (including CAH tables)
+	- ✅ Create all required tables
 - ✅ Verify database schema
 
 ### 6. **Verification & Testing**
@@ -162,19 +162,7 @@ DATABASE_URL=postgresql://username:password@ep-*.neon.tech/neondb?sslmode=requir
 - **Railway**: [railway.app](https://railway.app)
 - **Heroku Postgres**: [heroku.com](https://heroku.com)
 
-## 🎮 Post-Setup: Cards Against Humanity
-
-After successful setup, initialize the CAH system:
-
-```bash
-# Start the bot
-npm run dev
-
-# In Discord, use these commands:
-/cahadmin cards seed                    # Initialize card database
-/cahadmin settings family-mode true     # Enable family-friendly mode (optional)
-/cah create                            # Start your first game!
-```
+<!-- Cards Against Humanity feature removed -->
 
 ## 🚨 Troubleshooting
 
@@ -258,7 +246,7 @@ If you encounter issues not covered here:
 1. Check the troubleshooting section in `README.md`
 2. Review the setup script output for specific error messages
 3. Check `DEPLOYMENT.md` for production deployment guidance
-4. Review `CARDS_AGAINST_HUMANITY.md` for CAH-specific setup
+4. (CAH docs removed) Review project docs for any game-specific setup
 
 ## 📄 Script Output Examples
 

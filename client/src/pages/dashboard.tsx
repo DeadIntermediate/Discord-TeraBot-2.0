@@ -41,9 +41,7 @@ export default function Dashboard() {
   });
 
   const startBotMutation = useMutation({
-    mutationFn: () => apiRequest('/api/bot/start', {
-      method: 'POST',
-    }),
+    mutationFn: () => apiRequest('POST', '/api/bot/start'),
     onSuccess: () => {
       toast({
         title: "Bot Started",
@@ -61,9 +59,7 @@ export default function Dashboard() {
   });
 
   const stopBotMutation = useMutation({
-    mutationFn: () => apiRequest('/api/bot/stop', {
-      method: 'POST',
-    }),
+    mutationFn: () => apiRequest('POST', '/api/bot/stop'),
     onSuccess: () => {
       toast({
         title: "Bot Stopped",
@@ -81,9 +77,7 @@ export default function Dashboard() {
   });
 
   const restartBotMutation = useMutation({
-    mutationFn: () => apiRequest('/api/bot/restart', {
-      method: 'POST',
-    }),
+    mutationFn: () => apiRequest('POST', '/api/bot/restart'),
     onSuccess: () => {
       toast({
         title: "Bot Restarting",
@@ -113,8 +107,8 @@ export default function Dashboard() {
     );
   }
 
-  const botRunning = botStatus?.running || false;
-  const botStatusText = botStatus?.status || "unknown";
+  const botRunning = (botStatus as any)?.running || false;
+  const botStatusText = (botStatus as any)?.status || "unknown";
 
   return (
     <div className="min-h-screen bg-background">
@@ -277,7 +271,7 @@ export default function Dashboard() {
                         <div>
                           <p className="text-sm text-muted-foreground">Total Members</p>
                           <p className="text-2xl font-bold" data-testid="stat-total-members">
-                            {serverStats?.memberCount || 0}
+                            {(serverStats as any)?.memberCount || 0}
                           </p>
                         </div>
                         <Users className="h-8 w-8 text-primary" />
@@ -291,7 +285,7 @@ export default function Dashboard() {
                         <div>
                           <p className="text-sm text-muted-foreground">Active Tickets</p>
                           <p className="text-2xl font-bold" data-testid="stat-active-tickets">
-                            {serverStats?.activeTickets || 0}
+                            {(serverStats as any)?.activeTickets || 0}
                           </p>
                         </div>
                         <Ticket className="h-8 w-8 text-blue-500" />
@@ -305,7 +299,7 @@ export default function Dashboard() {
                         <div>
                           <p className="text-sm text-muted-foreground">Mod Actions</p>
                           <p className="text-2xl font-bold" data-testid="stat-mod-actions">
-                            {serverStats?.moderationActions || 0}
+                            {(serverStats as any)?.moderationActions || 0}
                           </p>
                         </div>
                         <Shield className="h-8 w-8 text-destructive" />
@@ -319,7 +313,7 @@ export default function Dashboard() {
                         <div>
                           <p className="text-sm text-muted-foreground">Active Giveaways</p>
                           <p className="text-2xl font-bold" data-testid="stat-active-giveaways">
-                            {serverStats?.activeGiveaways || 0}
+                            {(serverStats as any)?.activeGiveaways || 0}
                           </p>
                         </div>
                         <Gift className="h-8 w-8 text-accent" />
@@ -344,15 +338,15 @@ export default function Dashboard() {
                           {botStatusText}
                         </Badge>
                       </div>
-                      {botStatus?.pid && (
+                      {(botStatus as any)?.pid && (
                         <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
                           <span className="font-medium">Process ID</span>
-                          <span className="text-muted-foreground">{botStatus.pid}</span>
+                          <span className="text-muted-foreground">{(botStatus as any).pid}</span>
                         </div>
                       )}
-                      {botStatus?.lastError && (
+                      {(botStatus as any)?.lastError && (
                         <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                          <span className="text-sm text-destructive">{botStatus.lastError}</span>
+                          <span className="text-sm text-destructive">{(botStatus as any).lastError}</span>
                         </div>
                       )}
                     </div>

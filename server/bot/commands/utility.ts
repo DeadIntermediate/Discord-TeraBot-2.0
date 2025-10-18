@@ -79,36 +79,42 @@ const levelCommand = {
         return;
       }
 
-      const xpForNextLevel = Math.pow(member.level + 1, 2) * 100
-      const xpForCurrentLevel = Math.pow(member.level, 2) * 100
-      const xpNeeded = xpForNextLevel - member.xp
-      const progressXP = member.xp - xpForCurrentLevel
-      const totalXPForLevel = xpForNextLevel - xpForCurrentLevel
-      const progressPercent = Math.floor((progressXP / totalXPForLevel) * 100)
+  const level = Number(member.level ?? 0);
+  const xp = Number(member.xp ?? 0);
+  const xpForNextLevel = Math.pow(level + 1, 2) * 100;
+  const xpForCurrentLevel = Math.pow(level, 2) * 100;
+  const xpNeeded = xpForNextLevel - xp;
+  const progressXP = xp - xpForCurrentLevel;
+  const totalXPForLevel = xpForNextLevel - xpForCurrentLevel;
+  const progressPercent = Math.floor((progressXP / Math.max(1, totalXPForLevel)) * 100);
       
       // Create visual progress bar for overall XP
-      const barLength = 20
-      const filledLength = Math.floor((progressXP / totalXPForLevel) * barLength)
-      const emptyLength = barLength - filledLength
+  const barLength = 20;
+  const filledLength = Math.floor((progressXP / Math.max(1, totalXPForLevel)) * barLength);
+  const emptyLength = barLength - filledLength;
       const progressBar = '🟩'.repeat(filledLength) + '🟥'.repeat(emptyLength)
       
       // Text XP progress
-      const textXpForNextLevel = (member.textLevel + 1) * 100
-      const textXpForCurrentLevel = member.textLevel * 100
-      const textProgressXP = member.textXp - textXpForCurrentLevel
-      const textTotalXP = textXpForNextLevel - textXpForCurrentLevel
-      const textFilledLength = Math.floor((textProgressXP / textTotalXP) * barLength)
-      const textProgressBar = '🟦'.repeat(textFilledLength) + '⬜'.repeat(barLength - textFilledLength)
-      const textProgressPercent = Math.floor((textProgressXP / textTotalXP) * 100)
+  const textLevel = Number(member.textLevel ?? 0);
+  const textXp = Number(member.textXp ?? 0);
+  const textXpForNextLevel = (textLevel + 1) * 100;
+  const textXpForCurrentLevel = textLevel * 100;
+  const textProgressXP = textXp - textXpForCurrentLevel;
+  const textTotalXP = textXpForNextLevel - textXpForCurrentLevel;
+  const textFilledLength = Math.floor((textProgressXP / Math.max(1, textTotalXP)) * barLength);
+  const textProgressBar = '🟦'.repeat(textFilledLength) + '⬜'.repeat(barLength - textFilledLength);
+  const textProgressPercent = Math.floor((textProgressXP / Math.max(1, textTotalXP)) * 100);
       
       // Voice XP progress
-      const voiceXpForNextLevel = (member.voiceLevel + 1) * 100
-      const voiceXpForCurrentLevel = member.voiceLevel * 100
-      const voiceProgressXP = member.voiceXp - voiceXpForCurrentLevel
-      const voiceTotalXP = voiceXpForNextLevel - voiceXpForCurrentLevel
-      const voiceFilledLength = Math.floor((voiceProgressXP / voiceTotalXP) * barLength)
-      const voiceProgressBar = '�'.repeat(voiceFilledLength) + '🟥'.repeat(barLength - voiceFilledLength)
-      const voiceProgressPercent = Math.floor((voiceProgressXP / voiceTotalXP) * 100)
+  const voiceLevel = Number(member.voiceLevel ?? 0);
+  const voiceXp = Number(member.voiceXp ?? 0);
+  const voiceXpForNextLevel = (voiceLevel + 1) * 100;
+  const voiceXpForCurrentLevel = voiceLevel * 100;
+  const voiceProgressXP = voiceXp - voiceXpForCurrentLevel;
+  const voiceTotalXP = voiceXpForNextLevel - voiceXpForCurrentLevel;
+  const voiceFilledLength = Math.floor((voiceProgressXP / Math.max(1, voiceTotalXP)) * barLength);
+  const voiceProgressBar = '🟩'.repeat(voiceFilledLength) + '🟥'.repeat(barLength - voiceFilledLength);
+  const voiceProgressPercent = Math.floor((voiceProgressXP / Math.max(1, voiceTotalXP)) * 100);
 
       const embed = new EmbedBuilder()
         .setColor(0x4caf50)
@@ -121,9 +127,9 @@ const levelCommand = {
           { name: '📈 Legacy Level', value: `Level ${member.level}`, inline: true },
           { name: '📝 Text XP Progress', value: `\`${textProgressBar}\` ${textProgressPercent}%\n${textProgressXP}/${textTotalXP} XP`, inline: false },
           { name: '🎤 Voice XP Progress', value: `\`${voiceProgressBar}\` ${voiceProgressPercent}%\n${voiceProgressXP}/${voiceTotalXP} XP`, inline: false },
-          { name: '💬 Messages Sent', value: member.messageCount.toLocaleString(), inline: true },
-          { name: '⏱️ Voice Time', value: `${Math.floor(member.voiceTime / 60)}h ${member.voiceTime % 60}m`, inline: true },
-          { name: '🎯 Total XP', value: `${member.xp.toLocaleString()}`, inline: true }
+          { name: '💬 Messages Sent', value: String(member.messageCount ?? 0), inline: true },
+          { name: '⏱️ Voice Time', value: `${Math.floor((Number(member.voiceTime ?? 0)) / 60)}h ${Number(member.voiceTime ?? 0) % 60}m`, inline: true },
+          { name: '🎯 Total XP', value: `${xp.toLocaleString()}`, inline: true }
         )
         .setFooter({ text: `Requested by ${interaction.user.tag}` })
         .setTimestamp()

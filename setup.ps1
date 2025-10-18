@@ -263,15 +263,12 @@ function Show-PostInstallInstructions {
     Write-ColorOutput "3. Run: npm run dev (to start in development mode)" $Yellow
     Write-ColorOutput "4. Or run: npm start (to start in production mode)" $Yellow
     Write-ColorOutput ""
-    Write-ColorOutput "🎮 Cards Against Humanity Setup:" $Blue
-    Write-ColorOutput "1. Use /cahadmin cards seed to initialize cards" $Yellow
-    Write-ColorOutput "2. Use /cahadmin settings family-mode to configure content" $Yellow
-    Write-ColorOutput "3. Use /cah create to start your first game!" $Yellow
+    # Feature-specific docs removed
     Write-ColorOutput ""
     Write-ColorOutput "📚 Documentation:" $Blue
     Write-ColorOutput "- README.md - General bot information" $Yellow
     Write-ColorOutput "- DEPLOYMENT.md - Deployment instructions" $Yellow
-    Write-ColorOutput "- CARDS_AGAINST_HUMANITY.md - CAH game documentation" $Yellow
+    # CAH doc removed (was deleted)
     Write-ColorOutput ""
     Write-ColorOutput "❓ Need help? Check the troubleshooting section in README.md" $Blue
 }

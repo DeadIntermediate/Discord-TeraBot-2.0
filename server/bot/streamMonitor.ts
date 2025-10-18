@@ -2,6 +2,7 @@ import { Client, EmbedBuilder, TextChannel } from 'discord.js';
 import { db } from '../db';
 import { streamNotifications } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
+import { info, debug, error } from '../utils/logger';
 
 // Note: To use this properly, you'll need to set up API credentials for each platform
 // For now, this is a basic structure. You'll need to:
@@ -28,7 +29,7 @@ export class StreamMonitor {
   }
 
   start() {
-    console.log('🔍 Starting stream monitor...');
+    info('🔍 Starting stream monitor...');
     
     // Run initial check
     this.checkAllStreams();
@@ -43,7 +44,7 @@ export class StreamMonitor {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
-      console.log('⏹️ Stream monitor stopped');
+      info('⏹️ Stream monitor stopped');
     }
   }
 
@@ -54,13 +55,13 @@ export class StreamMonitor {
         .from(streamNotifications)
         .where(eq(streamNotifications.isActive, true));
 
-      console.log(`🔍 Checking ${streams.length} stream(s)...`);
+  debug(`🔍 Checking ${streams.length} stream(s)...`);
 
       for (const stream of streams) {
         await this.checkStream(stream);
       }
-    } catch (error) {
-      console.error('Error checking streams:', error);
+    } catch (err) {
+      error('Error checking streams:', err);
     }
   }
 
@@ -142,8 +143,8 @@ export class StreamMonitor {
           })
           .where(eq(streamNotifications.id, stream.id));
       }
-    } catch (error) {
-      console.error(`Error checking ${stream.platform}/${stream.username}:`, error);
+    } catch (err) {
+      error(`Error checking ${stream.platform}/${stream.username}:`, err);
     }
   }
 
@@ -208,8 +209,8 @@ export class StreamMonitor {
         .set({ messageId: message.id })
         .where(eq(streamNotifications.id, stream.id));
 
-    } catch (error) {
-      console.error('Error sending live notification:', error);
+    } catch (err) {
+      error('Error sending live notification:', err);
     }
   }
 
@@ -229,8 +230,8 @@ export class StreamMonitor {
           
           await message.edit({ embeds: [embed] });
         }
-      } catch (error) {
-        console.error('Error updating offline status:', error);
+      } catch (err) {
+        error('Error updating offline status:', err);
       }
     }
   }
@@ -242,7 +243,7 @@ export class StreamMonitor {
     // 2. Get Client ID and Secret
     // 3. Use Twitch Helix API: GET https://api.twitch.tv/helix/streams?user_login={username}
     
-    console.log(`[Twitch] Checking ${username} (API not implemented)`);
+    debug(`[Twitch] Checking ${username} (API not implemented)`);
     return null;
   }
 
@@ -254,7 +255,7 @@ export class StreamMonitor {
     // 3. Get API key
     // 4. Use endpoint: GET https://www.googleapis.com/youtube/v3/search?part=snippet&channelId={channelId}&eventType=live&type=video
     
-    console.log(`[YouTube] Checking ${username} (API not implemented)`);
+    debug(`[YouTube] Checking ${username} (API not implemented)`);
     return null;
   }
 
@@ -282,8 +283,8 @@ export class StreamMonitor {
       }
 
       return { isLive: false };
-    } catch (error) {
-      console.error(`Error checking Kick for ${username}:`, error);
+    } catch (err) {
+      error(`Error checking Kick for ${username}:`, err);
       return null;
     }
   }

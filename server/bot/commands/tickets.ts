@@ -62,7 +62,7 @@ const createTicketCommand = {
 
       // Get server settings for ticket category
       const server = await storage.getDiscordServer(interaction.guild.id);
-      const ticketCategoryId = server?.settings?.ticketCategoryId;
+  const ticketCategoryId = (server as any)?.settings?.ticketCategoryId;
 
       let ticketChannel: TextChannel;
       
@@ -100,7 +100,7 @@ const createTicketCommand = {
       });
 
       // Add support role permissions if configured
-      const supportRoleId = server?.settings?.supportRoleId;
+  const supportRoleId = (server as any)?.settings?.supportRoleId;
       if (supportRoleId) {
         await ticketChannel.permissionOverwrites.create(supportRoleId, {
           ViewChannel: true,
@@ -394,7 +394,7 @@ async function handleListTickets(interaction: ChatInputCommandInteraction) {
       medium: '🟡',
       high: '🟠',
       urgent: '🔴'
-    }[ticket.priority] || '⚪';
+  }[String(ticket.priority) || 'normal'] || '⚪';
     
     return `${statusEmoji} **${ticket.subject}** | ${priorityEmoji} ${ticket.priority} | <#${ticket.channelId}> | \`${ticket.id.slice(-8)}\``;
   }).join('\n');
