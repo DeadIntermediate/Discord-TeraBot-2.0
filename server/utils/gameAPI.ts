@@ -320,6 +320,9 @@ class GameAPIService {
     platforms.forEach(platform => {
       const name = platform.name;
       
+      // Skip if name is undefined or null
+      if (!name) return;
+      
       // Categorize platforms
       if (name.includes('PlayStation') || name.includes('PS')) {
         platformGroups['PlayStation'] = platformGroups['PlayStation'] || [];

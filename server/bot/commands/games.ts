@@ -125,11 +125,21 @@ async function handleSearch(interaction: ChatInputCommandInteraction) {
       .setTitle(`🔍 Search Results for "${query}"`)
       .setDescription(`Found ${searchResults.count} games. Select one below to view details.`)
       .addFields(
-        searchResults.results.slice(0, 5).map((game, index) => ({
-          name: `${index + 1}. ${game.name}`,
-          value: `**Released:** ${game.released || 'Unknown'}\n**Rating:** ${gameAPI.formatRating(game.rating, game.rating_top)}\n**Platforms:** ${gameAPI.formatPlatforms(game.platforms).substring(0, 100)}`,
-          inline: false
-        }))
+        await Promise.all(
+          searchResults.results.slice(0, 5).map(async (game, index) => {
+            // Fetch full details to get platforms
+            const fullDetails = await gameAPI.getGameDetails(game.id);
+            const platformsStr = fullDetails?.platforms && fullDetails.platforms.length > 0
+              ? gameAPI.formatPlatforms(fullDetails.platforms).substring(0, 100)
+              : 'Unknown';
+            
+            return {
+              name: `${index + 1}. ${game.name}`,
+              value: `**Released:** ${game.released || 'Unknown'}\n**Rating:** ${gameAPI.formatRating(game.rating, game.rating_top)}\n**Platforms:** ${platformsStr}`,
+              inline: false
+            };
+          })
+        )
       )
       .setFooter({ text: 'Select a game from the dropdown to view detailed information' });
 
