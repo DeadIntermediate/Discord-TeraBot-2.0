@@ -178,6 +178,10 @@ class GameAPIService {
       }
 
       const data = await response.json();
+      console.log(`📊 Game ${gameId}: Found ${data.platforms?.length || 0} platforms`);
+      if (data.platforms && data.platforms.length > 0) {
+        console.log(`   Platforms: ${data.platforms.map((p: any) => p.platform?.name || p.name).join(', ')}`);
+      }
       this.setCachedData(cacheKey, data);
       return data;
     } catch (error) {
@@ -312,50 +316,198 @@ class GameAPIService {
    * Format platforms for display
    */
   formatPlatforms(platforms?: GamePlatform[]): string {
-    if (!platforms || platforms.length === 0) return 'Unknown';
+    if (!platforms || platforms.length === 0) return '❓ Unknown';
     
-    // Group by parent platform type
-    const platformGroups: { [key: string]: string[] } = {};
+    console.log(`🔧 formatPlatforms() received ${platforms.length} platforms:`, JSON.stringify(platforms.slice(0, 2)));
     
-    platforms.forEach(platform => {
-      const name = platform.name;
-      
-      // Skip if name is undefined or null
+    // First pass: normalize and deduplicate platform names
+    const platformNames = new Set<string>();
+    
+    platforms.forEach((platform: any) => {
+      let name = platform.name || platform.platform?.name || '';
       if (!name) return;
       
-      // Categorize platforms
-      if (name.includes('PlayStation') || name.includes('PS')) {
-        platformGroups['PlayStation'] = platformGroups['PlayStation'] || [];
-        platformGroups['PlayStation'].push(name);
-      } else if (name.includes('Xbox')) {
-        platformGroups['Xbox'] = platformGroups['Xbox'] || [];
-        platformGroups['Xbox'].push(name);
-      } else if (name.includes('Nintendo') || name.includes('Switch') || name.includes('Wii')) {
-        platformGroups['Nintendo'] = platformGroups['Nintendo'] || [];
-        platformGroups['Nintendo'].push(name);
-      } else if (name.includes('PC') || name.includes('Windows') || name.includes('Steam')) {
-        platformGroups['PC'] = platformGroups['PC'] || [];
-        platformGroups['PC'].push(name);
-      } else if (name.includes('Mobile') || name.includes('iOS') || name.includes('Android')) {
-        platformGroups['Mobile'] = platformGroups['Mobile'] || [];
-        platformGroups['Mobile'].push(name);
+      // Normalize common duplicates
+      if (name === 'PC' || name === 'Windows' || name === 'Steam') {
+        platformNames.add('PC');
+      } else if (name === 'PlayStation 5') {
+        platformNames.add('PS5');
+      } else if (name === 'PlayStation 4') {
+        platformNames.add('PS4');
+      } else if (name === 'PlayStation 3') {
+        platformNames.add('PS3');
+      } else if (name === 'PlayStation 2') {
+        platformNames.add('PS2');
+      } else if (name === 'PlayStation 1' || name === 'PlayStation') {
+        platformNames.add('PS1');
+      } else if (name === 'Xbox Series S/X' || name === 'Xbox Series X/S') {
+        platformNames.add('Xbox Series S/X');
+      } else if (name === 'Xbox One') {
+        platformNames.add('Xbox One');
+      } else if (name === 'Xbox 360') {
+        platformNames.add('Xbox 360');
+      } else if (name === 'Xbox') {
+        platformNames.add('Xbox');
+      } else if (name === 'Nintendo Switch') {
+        platformNames.add('Switch');
+      } else if (name === 'Nintendo 64') {
+        platformNames.add('N64');
+      } else if (name === 'Nintendo GameCube') {
+        platformNames.add('GameCube');
+      } else if (name === 'Wii U') {
+        platformNames.add('Wii U');
+      } else if (name === 'Wii') {
+        platformNames.add('Wii');
+      } else if (name === 'Nintendo DS') {
+        platformNames.add('DS');
+      } else if (name === 'Game Boy Advance') {
+        platformNames.add('GBA');
+      } else if (name === 'macOS' || name === 'Mac') {
+        platformNames.add('macOS');
+      } else if (name === 'Linux') {
+        platformNames.add('Linux');
+      } else if (name.includes('iOS') || name === 'iPhone') {
+        platformNames.add('iOS');
+      } else if (name.includes('Android')) {
+        platformNames.add('Android');
       } else {
-        platformGroups['Other'] = platformGroups['Other'] || [];
-        platformGroups['Other'].push(name);
+        // Keep other platform names as-is
+        platformNames.add(name);
       }
     });
 
-    // Format output
-    const formatted = Object.keys(platformGroups).map(group => {
-      const platforms = platformGroups[group];
-      if (platforms.length === 1) {
-        return platforms[0];
+    // Second pass: group by category and assign emojis
+    const platformGroups: { [key: string]: { emoji: string; names: string[] } } = {
+      'PC': { emoji: '💻', names: [] },
+      'PlayStation': { emoji: '🎮', names: [] },
+      'Xbox': { emoji: '🎮', names: [] },
+      'Nintendo': { emoji: '🎮', names: [] },
+      'Mobile': { emoji: '📱', names: [] },
+      'Retro': { emoji: '👾', names: [] },
+    };
+
+    platformNames.forEach(name => {
+      if (name === 'PC' || name === 'macOS' || name === 'Linux') {
+        platformGroups['PC'].names.push(name);
+      } else if (name.startsWith('PS') || name.includes('PlayStation')) {
+        platformGroups['PlayStation'].names.push(name);
+      } else if (name.startsWith('Xbox') || name === 'Xbox') {
+        platformGroups['Xbox'].names.push(name);
+      } else if (name.includes('Switch') || name.startsWith('Nintendo') || name === 'Wii' || name === 'Wii U' || name === 'GameCube' || name === 'N64' || name === 'DS' || name === 'GBA') {
+        platformGroups['Nintendo'].names.push(name);
+      } else if (name === 'iOS' || name === 'Android') {
+        platformGroups['Mobile'].names.push(name);
       } else {
-        return `${group} (${platforms.length})`;
+        // Retro/other platforms
+        platformGroups['Retro'].names.push(name);
       }
     });
 
-    return formatted.join(', ');
+    // Format output with emojis
+    const formatted = Object.entries(platformGroups)
+      .filter(([_, group]) => group.names.length > 0)
+      .map(([type, group]) => {
+        const emoji = group.emoji;
+        const names = group.names;
+        
+        // If only one platform in this group, show just the emoji + name
+        if (names.length === 1) {
+          return `${emoji} ${names[0]}`;
+        } else {
+          // Multiple platforms, group them
+          return `${emoji} ${names.join(', ')}`;
+        }
+      });
+
+    const result = formatted.join(' • ') || '❓ Unknown';
+    console.log(`✅ formatPlatforms() returning: "${result}"`);
+    return result;
+  }
+
+  /**
+   * Try to get platform data from Steam API (fallback when RAWG data is incomplete)
+   */
+  async getGamePlatformsFromSteam(gameName: string): Promise<GamePlatform[] | null> {
+    try {
+      const cacheKey = `steam_platforms_${gameName}`;
+      const cached = this.getCachedData(cacheKey);
+      if (cached) return cached;
+
+      // Search for the game on Steam
+      const searchUrl = new URL('https://api.steampowered.com/ISteamApps/GetAppList/v2/');
+      const response = await fetch(searchUrl.toString());
+      
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      if (!data.applist?.apps) {
+        return null;
+      }
+
+      // Find matching game
+      const gameNameLower = gameName.toLowerCase();
+      const steamGame = data.applist.apps.find((app: any) => 
+        app.name.toLowerCase().includes(gameNameLower) || 
+        gameNameLower.includes(app.name.toLowerCase())
+      );
+
+      if (!steamGame) {
+        return null;
+      }
+
+      // Get detailed info including platforms
+      const detailUrl = new URL(`https://store.steampowered.com/api/appdetails`);
+      detailUrl.searchParams.append('appids', steamGame.appid.toString());
+      
+      const detailResponse = await fetch(detailUrl.toString());
+      if (!detailResponse.ok) {
+        return null;
+      }
+
+      const detailData = await detailResponse.json();
+      const gameData = Object.values(detailData)[0] as any;
+
+      if (!gameData?.data?.platforms) {
+        return null;
+      }
+
+      // Convert Steam platform info to our format
+      const platforms: GamePlatform[] = [];
+      const platformData = gameData.data.platforms;
+
+      if (platformData.windows) {
+        platforms.push({
+          id: 1,
+          name: 'PC (Windows)',
+          slug: 'pc',
+          image_background: ''
+        });
+      }
+      if (platformData.mac) {
+        platforms.push({
+          id: 2,
+          name: 'macOS',
+          slug: 'macos',
+          image_background: ''
+        });
+      }
+      if (platformData.linux) {
+        platforms.push({
+          id: 3,
+          name: 'Linux',
+          slug: 'linux',
+          image_background: ''
+        });
+      }
+
+      this.setCachedData(cacheKey, platforms.length > 0 ? platforms : null);
+      return platforms.length > 0 ? platforms : null;
+    } catch (error) {
+      console.error(`Error getting Steam platforms for "${gameName}":`, error);
+      return null;
+    }
   }
 
   /**
