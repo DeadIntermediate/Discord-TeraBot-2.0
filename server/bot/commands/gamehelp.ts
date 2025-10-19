@@ -4,7 +4,8 @@ import {
   EmbedBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ActionRowBuilder
+  ActionRowBuilder,
+  MessageFlags
 } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
@@ -39,7 +40,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     default:
       return await interaction.reply({
         content: '❌ Unknown subcommand!',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
   }
 }

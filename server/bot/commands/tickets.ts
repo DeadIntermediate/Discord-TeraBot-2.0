@@ -8,7 +8,8 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
-  ComponentType
+  ComponentType,
+  MessageFlags
 } from 'discord.js';
 import { storage } from '../../storage';
 
@@ -39,7 +40,7 @@ const createTicketCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -55,7 +56,7 @@ const createTicketCommand = {
       if (userHasOpenTicket) {
         await interaction.reply({ 
           content: 'You already have an open ticket. Please close your existing ticket before creating a new one.', 
-          ephemeral: true 
+          flags: MessageFlags.Ephemeral 
         });
         return;
       }
@@ -172,7 +173,7 @@ const createTicketCommand = {
       // Notify user
       await interaction.reply({
         content: `✅ Ticket created successfully! Check ${ticketChannel.toString()}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
 
       // Log to staff channel if configured
@@ -199,7 +200,7 @@ const createTicketCommand = {
       console.error('Error creating ticket:', error);
       await interaction.reply({
         content: 'An error occurred while creating your ticket. Please try again or contact an administrator.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -258,7 +259,7 @@ const ticketManageCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -283,7 +284,7 @@ const ticketManageCommand = {
       console.error(`Error in ticket-manage ${subcommand}:`, error);
       await interaction.reply({
         content: 'An error occurred while processing your request.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -304,12 +305,12 @@ async function handleCloseTicket(interaction: ChatInputCommandInteraction) {
   }
 
   if (!ticket) {
-    await interaction.reply({ content: 'Ticket not found or already closed.', ephemeral: true });
+    await interaction.reply({ content: 'Ticket not found or already closed.', flags: MessageFlags.Ephemeral });
     return;
   }
 
   if (ticket.status === 'closed') {
-    await interaction.reply({ content: 'This ticket is already closed.', ephemeral: true });
+    await interaction.reply({ content: 'This ticket is already closed.', flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -358,7 +359,7 @@ async function handleAssignTicket(interaction: ChatInputCommandInteraction) {
   }
 
   if (!ticket) {
-    await interaction.reply({ content: 'Ticket not found.', ephemeral: true });
+    await interaction.reply({ content: 'Ticket not found.', flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -383,7 +384,7 @@ async function handleListTickets(interaction: ChatInputCommandInteraction) {
     : await storage.getServerTickets(interaction.guild!.id, status);
 
   if (tickets.length === 0) {
-    await interaction.reply({ content: `No ${status} tickets found.`, ephemeral: true });
+    await interaction.reply({ content: `No ${status} tickets found.`, flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -406,11 +407,11 @@ async function handleListTickets(interaction: ChatInputCommandInteraction) {
     .setFooter({ text: `Showing ${Math.min(tickets.length, 10)} of ${tickets.length} tickets` })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [listEmbed], ephemeral: true });
+  await interaction.reply({ embeds: [listEmbed], flags: MessageFlags.Ephemeral });
 }
 
 async function handleTicketTranscript(interaction: ChatInputCommandInteraction) {
-  await interaction.reply({ content: 'Transcript generation is not yet implemented.', ephemeral: true });
+  await interaction.reply({ content: 'Transcript generation is not yet implemented.', flags: MessageFlags.Ephemeral });
   // TODO: Implement transcript generation
 }
 

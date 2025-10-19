@@ -4,7 +4,8 @@ import {
   PermissionFlagsBits,
   EmbedBuilder,
   TextChannel,
-  ChannelType
+  ChannelType,
+  MessageFlags
 } from 'discord.js';
 import { db } from '../../db';
 import { discordServers, streamNotifications, discordUsers } from '../../../shared/schema';
@@ -104,7 +105,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleAddMe(interaction: ChatInputCommandInteraction) {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   if (!interaction.guild) {
     await interaction.editReply('This command can only be used in a server!');
@@ -256,7 +257,7 @@ async function handleAddMe(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleAdd(interaction: ChatInputCommandInteraction) {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   if (!interaction.guild) {
     await interaction.editReply('This command can only be used in a server!');
@@ -342,7 +343,7 @@ async function handleAdd(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleRemove(interaction: ChatInputCommandInteraction) {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   if (!interaction.guild) {
     await interaction.editReply('This command can only be used in a server!');
@@ -453,7 +454,7 @@ async function handleList(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleSetup(interaction: ChatInputCommandInteraction) {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   if (!interaction.guild) {
     await interaction.editReply('This command can only be used in a server!');

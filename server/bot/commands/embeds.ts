@@ -16,7 +16,8 @@ import {
   StringSelectMenuInteraction,
   ButtonInteraction,
   TextChannel,
-  ColorResolvable
+  ColorResolvable,
+  MessageFlags
 } from 'discord.js';
 import { storage } from '../../storage';
 
@@ -83,7 +84,7 @@ const embedCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -114,7 +115,7 @@ const embedCommand = {
       console.error(`Error in embed ${subcommand}:`, error);
       await interaction.reply({
         content: 'An error occurred while processing your request.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -129,7 +130,7 @@ async function handleCreateEmbed(interaction: ChatInputCommandInteraction) {
   if (!title && !description) {
     await interaction.reply({ 
       content: 'You must provide at least a title or description for the embed.', 
-      ephemeral: true 
+      flags: MessageFlags.Ephemeral 
     });
     return;
   }
@@ -158,12 +159,12 @@ async function handleCreateEmbed(interaction: ChatInputCommandInteraction) {
     await channel.send({ embeds: [embed] });
     await interaction.reply({ 
       content: `✅ Embed sent successfully to ${channel.toString()}!`, 
-      ephemeral: true 
+      flags: MessageFlags.Ephemeral 
     });
   } catch (error) {
     await interaction.reply({ 
       content: 'Failed to send embed. Check my permissions in the target channel.', 
-      ephemeral: true 
+      flags: MessageFlags.Ephemeral 
     });
   }
 }
@@ -236,7 +237,7 @@ async function handleEmbedBuilder(interaction: ChatInputCommandInteraction) {
     content: 'Welcome to the Embed Builder! 🎨',
     embeds: [embed],
     components: [actionRow1, actionRow2, actionRow3],
-    ephemeral: true
+    flags: MessageFlags.Ephemeral
   });
 }
 
@@ -263,12 +264,12 @@ async function handleSaveEmbed(interaction: ChatInputCommandInteraction) {
 
     await interaction.reply({ 
       content: `✅ Embed template "${name}" saved successfully!`, 
-      ephemeral: true 
+      flags: MessageFlags.Ephemeral 
     });
   } catch (error) {
     await interaction.reply({ 
       content: 'Failed to save embed template. The name might already be in use.', 
-      ephemeral: true 
+      flags: MessageFlags.Ephemeral 
     });
   }
 }
@@ -280,12 +281,12 @@ async function handleLoadEmbed(interaction: ChatInputCommandInteraction) {
     // This would need a new storage method to get saved embeds by name
     await interaction.reply({ 
       content: `Loading embed template "${name}"... (Feature not fully implemented)`, 
-      ephemeral: true 
+      flags: MessageFlags.Ephemeral 
     });
   } catch (error) {
     await interaction.reply({ 
       content: 'Failed to load embed template.', 
-      ephemeral: true 
+      flags: MessageFlags.Ephemeral 
     });
   }
 }
@@ -299,11 +300,11 @@ async function handleListEmbeds(interaction: ChatInputCommandInteraction) {
       .setDescription('No templates found. Use `/embed save` to create one!')
       .setTimestamp();
 
-    await interaction.reply({ embeds: [listEmbed], ephemeral: true });
+    await interaction.reply({ embeds: [listEmbed], flags: MessageFlags.Ephemeral });
   } catch (error) {
     await interaction.reply({ 
       content: 'Failed to list embed templates.', 
-      ephemeral: true 
+      flags: MessageFlags.Ephemeral 
     });
   }
 }
@@ -315,12 +316,12 @@ async function handleDeleteEmbed(interaction: ChatInputCommandInteraction) {
     // This would need a new storage method to delete saved embeds
     await interaction.reply({ 
       content: `Embed template "${name}" deleted successfully!`, 
-      ephemeral: true 
+      flags: MessageFlags.Ephemeral 
     });
   } catch (error) {
     await interaction.reply({ 
       content: 'Failed to delete embed template.', 
-      ephemeral: true 
+      flags: MessageFlags.Ephemeral 
     });
   }
 }
@@ -447,7 +448,7 @@ async function showColorSelector(interaction: ButtonInteraction) {
   await interaction.reply({
     content: 'Choose a color for your embed:',
     components: [actionRow],
-    ephemeral: true
+    flags: MessageFlags.Ephemeral
   });
 }
 
@@ -535,7 +536,7 @@ async function handleModalSubmit(interaction: ModalSubmitInteraction) {
   // Handle modal submissions for embed builder
   await interaction.reply({ 
     content: 'Embed updated! (Modal handling not fully implemented)', 
-    ephemeral: true 
+    flags: MessageFlags.Ephemeral 
   });
 }
 
@@ -546,7 +547,7 @@ async function handleSelectMenu(interaction: StringSelectMenuInteraction) {
     
     await interaction.reply({ 
       content: `✅ Embed color set to ${selectedColor}! (Color application not fully implemented)`, 
-      ephemeral: true 
+      flags: MessageFlags.Ephemeral 
     });
   }
 }
@@ -554,7 +555,7 @@ async function handleSelectMenu(interaction: StringSelectMenuInteraction) {
 async function handleSendEmbed(interaction: ButtonInteraction) {
   await interaction.reply({ 
     content: 'Choose a channel to send the embed to... (Feature not fully implemented)', 
-    ephemeral: true 
+    flags: MessageFlags.Ephemeral 
   });
 }
 
@@ -568,14 +569,14 @@ async function handlePreviewEmbed(interaction: ButtonInteraction) {
   await interaction.reply({ 
     content: 'Here\'s your embed preview:',
     embeds: [previewEmbed], 
-    ephemeral: true 
+    flags: MessageFlags.Ephemeral 
   });
 }
 
 async function handleClearEmbed(interaction: ButtonInteraction) {
   await interaction.reply({ 
     content: '🗑️ Embed cleared! Start building a new one.', 
-    ephemeral: true 
+    flags: MessageFlags.Ephemeral 
   });
 }
 

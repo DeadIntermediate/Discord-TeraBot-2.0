@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder, MessageFlags } from 'discord.js';
 import { storage } from '../../storage';
 
 const kickCommand = {
@@ -20,7 +20,7 @@ const kickCommand = {
     const reason = interaction.options.getString('reason') || 'No reason provided';
     
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -28,7 +28,7 @@ const kickCommand = {
       const member = await interaction.guild.members.fetch(user.id);
       
       if (!member.kickable) {
-        await interaction.reply({ content: 'I cannot kick this user.', ephemeral: true });
+        await interaction.reply({ content: 'I cannot kick this user.', flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -57,7 +57,7 @@ const kickCommand = {
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
       console.error('Error kicking user:', error);
-      await interaction.reply({ content: 'An error occurred while kicking the user.', ephemeral: true });
+      await interaction.reply({ content: 'An error occurred while kicking the user.', flags: MessageFlags.Ephemeral });
     }
   },
 };
@@ -88,7 +88,7 @@ const banCommand = {
     const deleteMessageDays = interaction.options.getInteger('delete_messages') || 0;
     
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -121,7 +121,7 @@ const banCommand = {
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
       console.error('Error banning user:', error);
-      await interaction.reply({ content: 'An error occurred while banning the user.', ephemeral: true });
+      await interaction.reply({ content: 'An error occurred while banning the user.', flags: MessageFlags.Ephemeral });
     }
   },
 };
@@ -152,7 +152,7 @@ const muteCommand = {
     const reason = interaction.options.getString('reason') || 'No reason provided';
     
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -160,7 +160,7 @@ const muteCommand = {
       const member = await interaction.guild.members.fetch(user.id);
       
       if (!member.moderatable) {
-        await interaction.reply({ content: 'I cannot timeout this user.', ephemeral: true });
+        await interaction.reply({ content: 'I cannot timeout this user.', flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -193,7 +193,7 @@ const muteCommand = {
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
       console.error('Error timing out user:', error);
-      await interaction.reply({ content: 'An error occurred while timing out the user.', ephemeral: true });
+      await interaction.reply({ content: 'An error occurred while timing out the user.', flags: MessageFlags.Ephemeral });
     }
   },
 };
@@ -214,7 +214,7 @@ const clearCommand = {
     const amount = interaction.options.getInteger('amount', true);
     
     if (!interaction.channel || !('bulkDelete' in interaction.channel)) {
-      await interaction.reply({ content: 'This command can only be used in text channels.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in text channels.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -235,13 +235,13 @@ const clearCommand = {
 
       await interaction.reply({ 
         content: `Successfully deleted ${deleted.size} messages.`, 
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       });
     } catch (error) {
       console.error('Error clearing messages:', error);
       await interaction.reply({ 
         content: 'An error occurred while clearing messages.', 
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       });
     }
   },
@@ -272,7 +272,7 @@ const jailCommand = {
     const duration = interaction.options.getInteger('duration');
     
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -280,7 +280,7 @@ const jailCommand = {
       const member = await interaction.guild.members.fetch(user.id);
       
       if (!member.moderatable) {
-        await interaction.reply({ content: 'I cannot jail this user.', ephemeral: true });
+        await interaction.reply({ content: 'I cannot jail this user.', flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -292,7 +292,7 @@ const jailCommand = {
       if (!jailRoleId) {
         await interaction.reply({ 
           content: 'Jail role not configured. Please set up a jail role in server settings.', 
-          ephemeral: true 
+          flags: MessageFlags.Ephemeral 
         });
         return;
       }
@@ -301,7 +301,7 @@ const jailCommand = {
       if (!jailRole) {
         await interaction.reply({ 
           content: 'Jail role not found. Please reconfigure the jail role.', 
-          ephemeral: true 
+          flags: MessageFlags.Ephemeral 
         });
         return;
       }
@@ -372,7 +372,7 @@ const jailCommand = {
 
     } catch (error) {
       console.error('Error jailing user:', error);
-      await interaction.reply({ content: 'An error occurred while jailing the user.', ephemeral: true });
+      await interaction.reply({ content: 'An error occurred while jailing the user.', flags: MessageFlags.Ephemeral });
     }
   },
 };
@@ -396,7 +396,7 @@ const unjailCommand = {
     const reason = interaction.options.getString('reason') || 'No reason provided';
     
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -410,7 +410,7 @@ const unjailCommand = {
       if (!jailRoleId) {
         await interaction.reply({ 
           content: 'Jail role not configured.', 
-          ephemeral: true 
+          flags: MessageFlags.Ephemeral 
         });
         return;
       }
@@ -419,7 +419,7 @@ const unjailCommand = {
       if (!jailRole) {
         await interaction.reply({ 
           content: 'Jail role not found.', 
-          ephemeral: true 
+          flags: MessageFlags.Ephemeral 
         });
         return;
       }
@@ -427,7 +427,7 @@ const unjailCommand = {
       if (!member.roles.cache.has(jailRoleId)) {
         await interaction.reply({ 
           content: 'This user is not jailed.', 
-          ephemeral: true 
+          flags: MessageFlags.Ephemeral 
         });
         return;
       }
@@ -459,7 +459,7 @@ const unjailCommand = {
 
     } catch (error) {
       console.error('Error unjailing user:', error);
-      await interaction.reply({ content: 'An error occurred while unjailing the user.', ephemeral: true });
+      await interaction.reply({ content: 'An error occurred while unjailing the user.', flags: MessageFlags.Ephemeral });
     }
   },
 };
@@ -483,7 +483,7 @@ const warnCommand = {
     const reason = interaction.options.getString('reason', true);
     
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -529,7 +529,7 @@ const warnCommand = {
 
     } catch (error) {
       console.error('Error warning user:', error);
-      await interaction.reply({ content: 'An error occurred while warning the user.', ephemeral: true });
+      await interaction.reply({ content: 'An error occurred while warning the user.', flags: MessageFlags.Ephemeral });
     }
   },
 };
@@ -548,7 +548,7 @@ const modHistoryCommand = {
     const user = interaction.options.getUser('user', true);
     
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -558,7 +558,7 @@ const modHistoryCommand = {
       if (history.length === 0) {
         await interaction.reply({ 
           content: `${user.tag} has no moderation history.`, 
-          ephemeral: true 
+          flags: MessageFlags.Ephemeral 
         });
         return;
       }
@@ -585,13 +585,13 @@ const modHistoryCommand = {
         .setFooter({ text: `Showing ${Math.min(history.length, 10)} of ${history.length} entries` })
         .setTimestamp();
 
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
     } catch (error) {
       console.error('Error fetching moderation history:', error);
       await interaction.reply({ 
         content: 'An error occurred while fetching moderation history.', 
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       });
     }
   },

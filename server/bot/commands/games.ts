@@ -8,7 +8,8 @@ import {
   ComponentType,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder
-  , ButtonInteraction
+  , ButtonInteraction,
+  MessageFlags
 } from 'discord.js';
 import { gameAPI, GameData, GameScreenshot } from '../../utils/gameAPI';
 
@@ -79,7 +80,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     default:
       return await interaction.reply({
         content: '❌ Unknown subcommand!',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
   }
 }
@@ -553,7 +554,7 @@ async function showGameScreenshots(interaction: any, game: GameData, screenshots
     if (buttonInteraction.user.id !== interaction.user.id) {
       await buttonInteraction.reply({
         content: '❌ You cannot control this screenshot viewer.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return;
     }

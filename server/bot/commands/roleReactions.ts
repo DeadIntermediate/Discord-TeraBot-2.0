@@ -14,7 +14,8 @@ import {
   User,
   GuildMember,
   PartialMessageReaction,
-  PartialUser
+  PartialUser,
+  MessageFlags
 } from 'discord.js';
 import { storage } from '../../storage';
 
@@ -94,7 +95,7 @@ const roleReactionCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -122,7 +123,7 @@ const roleReactionCommand = {
       console.error(`Error in rolereaction ${subcommand}:`, error);
       await interaction.reply({
         content: 'An error occurred while processing your request.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -150,12 +151,12 @@ async function handleCreateRoleMenu(interaction: ChatInputCommandInteraction) {
 
     await interaction.reply({
       content: `✅ Role menu created! Message ID: \`${message.id}\`\nUse \`/rolereaction add\` to add role-emoji pairs.`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   } catch (error) {
     await interaction.reply({
       content: 'Failed to create role menu. Check my permissions in the target channel.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 }
@@ -186,7 +187,7 @@ async function handleAddRoleReaction(interaction: ChatInputCommandInteraction) {
     }
 
     if (!message) {
-      await interaction.reply({ content: 'Message not found.', ephemeral: true });
+      await interaction.reply({ content: 'Message not found.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -195,7 +196,7 @@ async function handleAddRoleReaction(interaction: ChatInputCommandInteraction) {
     if (role.position >= botMember.roles.highest.position) {
       await interaction.reply({ 
         content: 'I cannot assign this role because it is higher than or equal to my highest role.', 
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       });
       return;
     }
@@ -242,14 +243,14 @@ async function handleAddRoleReaction(interaction: ChatInputCommandInteraction) {
 
     await interaction.reply({
       content: `✅ Role reaction added! ${emoji} → ${role.name}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
 
   } catch (error) {
     console.error('Error adding role reaction:', error);
     await interaction.reply({
       content: 'Failed to add role reaction. Make sure the emoji is valid and accessible.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 }
@@ -265,7 +266,7 @@ async function handleRemoveRoleReaction(interaction: ChatInputCommandInteraction
     const roleReaction = await storage.getRoleReaction(messageId, emoji);
     
     if (!roleReaction) {
-      await interaction.reply({ content: 'Role reaction not found.', ephemeral: true });
+      await interaction.reply({ content: 'Role reaction not found.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -275,7 +276,7 @@ async function handleRemoveRoleReaction(interaction: ChatInputCommandInteraction
       const channel = interaction.guild.channels.cache.get(roleReaction.channelId) as TextChannel;
       message = await channel.messages.fetch(messageId);
     } catch {
-      await interaction.reply({ content: 'Message not found.', ephemeral: true });
+      await interaction.reply({ content: 'Message not found.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -290,14 +291,14 @@ async function handleRemoveRoleReaction(interaction: ChatInputCommandInteraction
 
     await interaction.reply({
       content: `✅ Role reaction removed for ${emoji}`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
 
   } catch (error) {
     console.error('Error removing role reaction:', error);
     await interaction.reply({
       content: 'Failed to remove role reaction.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 }
@@ -313,11 +314,11 @@ async function handleListRoleReactions(interaction: ChatInputCommandInteraction)
       .setDescription('No role reactions found. Use `/rolereaction create` to get started!')
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   } catch (error) {
     await interaction.reply({
       content: 'Failed to list role reactions.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 }
@@ -407,14 +408,14 @@ async function handleCreateTemplate(interaction: ChatInputCommandInteraction) {
 
     await interaction.reply({
       content: `✅ ${template.title} template created! Message ID: \`${message.id}\`\n**Note:** You need to create the actual roles and link them using \`/rolereaction add\`.`,
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
 
   } catch (error) {
     console.error('Error creating template:', error);
     await interaction.reply({
       content: 'Failed to create template.',
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
   }
 }

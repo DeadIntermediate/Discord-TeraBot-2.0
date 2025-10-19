@@ -9,7 +9,8 @@ import {
   ComponentType,
   TextChannel,
   time,
-  TimestampStyles
+  TimestampStyles,
+  MessageFlags
 } from 'discord.js';
 import { storage } from '../../storage';
 
@@ -57,7 +58,7 @@ const createGiveawayCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -143,7 +144,7 @@ const createGiveawayCommand = {
 
       await interaction.reply({
         content: `✅ Giveaway created successfully! Check ${channel.toString()}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
 
       // Schedule giveaway end (in a real implementation, you'd use a proper job scheduler)
@@ -155,7 +156,7 @@ const createGiveawayCommand = {
       console.error('Error creating giveaway:', error);
       await interaction.reply({
         content: 'An error occurred while creating the giveaway.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -198,7 +199,7 @@ const giveawayManageCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -220,7 +221,7 @@ const giveawayManageCommand = {
       console.error(`Error in giveaway-manage ${subcommand}:`, error);
       await interaction.reply({
         content: 'An error occurred while processing your request.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -231,17 +232,17 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction) {
   
   const giveaway = await storage.getGiveaway(giveawayId);
   if (!giveaway) {
-    await interaction.reply({ content: 'Giveaway not found.', ephemeral: true });
+    await interaction.reply({ content: 'Giveaway not found.', flags: MessageFlags.Ephemeral });
     return;
   }
 
   if (!giveaway.isActive) {
-    await interaction.reply({ content: 'This giveaway has already ended.', ephemeral: true });
+    await interaction.reply({ content: 'This giveaway has already ended.', flags: MessageFlags.Ephemeral });
     return;
   }
 
   await endGiveaway(giveawayId);
-  await interaction.reply({ content: 'Giveaway ended successfully!', ephemeral: true });
+  await interaction.reply({ content: 'Giveaway ended successfully!', flags: MessageFlags.Ephemeral });
 }
 
 async function handleRerollGiveaway(interaction: ChatInputCommandInteraction) {
@@ -249,18 +250,18 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction) {
   
   const giveaway = await storage.getGiveaway(giveawayId);
   if (!giveaway) {
-    await interaction.reply({ content: 'Giveaway not found.', ephemeral: true });
+    await interaction.reply({ content: 'Giveaway not found.', flags: MessageFlags.Ephemeral });
     return;
   }
 
   if (giveaway.isActive) {
-    await interaction.reply({ content: 'Cannot reroll an active giveaway.', ephemeral: true });
+    await interaction.reply({ content: 'Cannot reroll an active giveaway.', flags: MessageFlags.Ephemeral });
     return;
   }
 
   const entries = giveaway.entries as string[] || [];
   if (entries.length === 0) {
-    await interaction.reply({ content: 'No entries to reroll.', ephemeral: true });
+    await interaction.reply({ content: 'No entries to reroll.', flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -286,7 +287,7 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction) {
     await channel.send({ embeds: [rerollEmbed] });
   }
 
-  await interaction.reply({ content: 'Giveaway rerolled successfully!', ephemeral: true });
+  await interaction.reply({ content: 'Giveaway rerolled successfully!', flags: MessageFlags.Ephemeral });
 }
 
 async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
@@ -303,7 +304,7 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
   }
 
   if (giveaways.length === 0) {
-    await interaction.reply({ content: `No ${status} giveaways found.`, ephemeral: true });
+    await interaction.reply({ content: `No ${status} giveaways found.`, flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -321,7 +322,7 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
     .setFooter({ text: `Showing ${Math.min(giveaways.length, 10)} of ${giveaways.length} giveaways` })
     .setTimestamp();
 
-  await interaction.reply({ embeds: [listEmbed], ephemeral: true });
+  await interaction.reply({ embeds: [listEmbed], flags: MessageFlags.Ephemeral });
 }
 
 async function endGiveaway(giveawayId: string) {
