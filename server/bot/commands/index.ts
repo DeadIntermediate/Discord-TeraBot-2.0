@@ -10,6 +10,7 @@ import * as gamehelpCommand from './gamehelp'
 import * as gamedemoCommand from './gamedemo'
 // CAH commands removed
 import * as helpCommand from './help'
+import * as socialMediaCommand from './socialmedia'
 
 export const commands = [
   ...moderationCommands,
@@ -24,4 +25,5 @@ export const commands = [
   gamedemoCommand,
   // CAH commands removed
   helpCommand,
+  socialMediaCommand,
 ]
