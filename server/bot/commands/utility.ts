@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ChannelType, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { storage } from '../../storage';
 
 const serverInfoCommand = {
@@ -120,10 +120,12 @@ const levelCommand = {
         // Voice XP progress
         const voiceLevel = Number(member.voiceLevel ?? 0);
         const voiceXp = Number(member.voiceXp ?? 0);
-        const voiceXpForNextLevel = (voiceLevel + 1) * 100;
-        const voiceXpForCurrentLevel = voiceLevel * 100;
-        const voiceProgressXP = Math.max(0, voiceXp - voiceXpForCurrentLevel);
-        const voiceTotalXP = Math.max(1, voiceXpForNextLevel - voiceXpForCurrentLevel);
+        // Each level requires (level * 100) XP to reach the NEXT level
+        // So to reach level X, you need: 100 + 200 + 300 + ... + (X-1)*100
+        const xpNeededForCurrentLevel = voiceLevel * 100;
+        const xpNeededForNextLevel = (voiceLevel + 1) * 100;
+        const voiceProgressXP = Math.max(0, voiceXp % xpNeededForNextLevel);
+        const voiceTotalXP = Math.max(1, xpNeededForNextLevel);
         const voiceFilledLength = Math.max(0, Math.min(barLength, Math.floor((voiceProgressXP / voiceTotalXP) * barLength)));
         const voiceProgressBar = '🟩'.repeat(voiceFilledLength) + '🟥'.repeat(barLength - voiceFilledLength);
         const voiceProgressPercent = Math.floor((voiceProgressXP / voiceTotalXP) * 100);
@@ -208,8 +210,170 @@ const leaderboardCommand = {
   },
 };
 
+const voiceXpMigrationCommand = {
+  data: new SlashCommandBuilder()
+    .setName('migrate_voice_xp')
+    .setDescription('🔧 ADMIN: Migrate existing voice time to voice XP')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+  
+  async execute(interaction: ChatInputCommandInteraction) {
+    if (!interaction.guild) {
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    // Check if user is admin
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      await interaction.reply({ content: '❌ You need Administrator permissions to use this command.', flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    await interaction.deferReply();
+
+    try {
+      // Get all members for this server
+      const members = await storage.getServerMembers(interaction.guild.id);
+      
+      if (!members || members.length === 0) {
+        return await interaction.editReply('❌ No members found in the database.');
+      }
+
+      let migratedCount = 0;
+      let xpAwardedTotal = 0;
+
+      const VOICE_XP_PER_MINUTE = 2;
+      const XP_PER_LEVEL = 100;
+
+      for (const member of members) {
+        const voiceTimeMinutes = Number(member.voiceTime ?? 0);
+        const currentVoiceXp = Number(member.voiceXp ?? 0);
+
+        // Only migrate if they have voice time but no (or low) XP
+        if (voiceTimeMinutes > 0 && currentVoiceXp < voiceTimeMinutes * VOICE_XP_PER_MINUTE) {
+          const calculatedXp = voiceTimeMinutes * VOICE_XP_PER_MINUTE;
+          const xpGain = calculatedXp - currentVoiceXp;
+
+          // Calculate new level
+          let newVoiceLevel = 1;
+          let remainingXp = calculatedXp;
+
+          while (remainingXp >= XP_PER_LEVEL * newVoiceLevel) {
+            remainingXp -= XP_PER_LEVEL * newVoiceLevel;
+            newVoiceLevel++;
+          }
+
+          // Calculate new global level
+          const textLevel = Number(member.textLevel ?? 1);
+          const newGlobalLevel = Math.floor((textLevel + newVoiceLevel) / 2);
+
+          // Update member
+          await storage.updateServerMember(interaction.guild.id, member.userId, {
+            voiceXp: calculatedXp,
+            voiceLevel: newVoiceLevel,
+            globalLevel: newGlobalLevel,
+          });
+
+          migratedCount++;
+          xpAwardedTotal += xpGain;
+        }
+      }
+
+      const embed = new EmbedBuilder()
+        .setColor(0x4caf50)
+        .setTitle('✅ Voice XP Migration Complete')
+        .addFields(
+          { name: 'Members Migrated', value: String(migratedCount), inline: true },
+          { name: 'Total XP Awarded', value: String(xpAwardedTotal), inline: true },
+          { name: 'Members Processed', value: String(members.length), inline: true }
+        )
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+    } catch (error) {
+      console.error('Error during voice XP migration:', error);
+      await interaction.editReply('❌ An error occurred during migration. Please check the server logs.');
+    }
+  },
+};
+
+const debugToggleCommand = {
+  data: new SlashCommandBuilder()
+    .setName('debug')
+    .setDescription('🔧 BOT OWNER ONLY: Toggle debug mode on/off')
+    .addStringOption(option =>
+      option
+        .setName('mode')
+        .setDescription('Set debug mode')
+        .setRequired(false)
+        .addChoices(
+          { name: 'Enable', value: 'debug' },
+          { name: 'Disable', value: 'info' },
+          { name: 'Show Current', value: 'show' }
+        )
+    ),
+  
+  async execute(interaction: ChatInputCommandInteraction) {
+    const botOwnerId = process.env.BOT_OWNER;
+    
+    // Check if user is bot owner
+    if (!botOwnerId || interaction.user.id !== botOwnerId) {
+      await interaction.reply({ 
+        content: '❌ Only the bot owner can use this command.', 
+        flags: MessageFlags.Ephemeral 
+      });
+      return;
+    }
+
+    const mode = interaction.options.getString('mode') || 'show';
+    
+    try {
+      const { setLogLevel, getLogLevel } = await import('../../utils/logger');
+      
+      if (mode === 'show') {
+        const currentLevel = getLogLevel();
+        const embed = new EmbedBuilder()
+          .setColor(0x00AAFF)
+          .setTitle('🔍 Debug Status')
+          .setDescription(`Current log level: **${currentLevel}**`)
+          .addFields(
+            { name: 'Debug Mode', value: currentLevel === 'DEBUG' ? '✅ Enabled' : '❌ Disabled', inline: true },
+            { name: 'Info', value: currentLevel !== 'ERROR' ? '✅ Logging' : '❌ Silent', inline: true }
+          )
+          .setFooter({ text: 'Use /debug with mode option to change' })
+          .setTimestamp();
+        
+        return await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+      }
+
+      setLogLevel(mode);
+      const newLevel = getLogLevel();
+      
+      const embed = new EmbedBuilder()
+        .setColor(mode === 'debug' ? 0x00FF00 : 0xFF6600)
+        .setTitle('🔧 Debug Mode Updated')
+        .setDescription(`Log level changed to: **${newLevel}**`)
+        .addFields(
+          { name: 'Status', value: mode === 'debug' ? '🟢 Debug Enabled' : '🟠 Debug Disabled', inline: false },
+          { name: 'Will Show', value: mode === 'debug' ? 'Errors, Warnings, Info, & Debug messages' : 'Errors, Warnings, & Info messages', inline: false }
+        )
+        .setFooter({ text: 'All console output will reflect this change immediately' })
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    } catch (error) {
+      console.error('Error toggling debug mode:', error);
+      await interaction.reply({ 
+        content: '❌ An error occurred while toggling debug mode.', 
+        flags: MessageFlags.Ephemeral 
+      });
+    }
+  },
+};
+
 export const utilityCommands = [
   serverInfoCommand,
   levelCommand,
   leaderboardCommand,
+  voiceXpMigrationCommand,
+  debugToggleCommand,
 ];

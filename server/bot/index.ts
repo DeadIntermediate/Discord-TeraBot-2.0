@@ -1,5 +1,6 @@
 import { Client, GatewayIntentBits, Events, Collection, Partials } from 'discord.js';
 import { readyHandler } from './events/ready';
+import { guildCreateHandler } from './events/guildCreate';
 import { guildMemberAddHandler } from './events/guildMemberAdd';
 import { guildMemberRemoveHandler } from './events/guildMemberRemove';
 import { interactionCreateHandler } from './events/interactionCreate';
@@ -67,6 +68,7 @@ client.on(Events.ShardResume, (id: number, replayed: number) => {
   info(`✅ Shard ${id} resumed (${replayed} events replayed)`);
 });
 
+client.on(Events.GuildCreate, guildCreateHandler);
 client.on(Events.GuildMemberAdd, guildMemberAddHandler);
 client.on(Events.GuildMemberRemove, guildMemberRemoveHandler);
 client.on(Events.InteractionCreate, interactionCreateHandler);

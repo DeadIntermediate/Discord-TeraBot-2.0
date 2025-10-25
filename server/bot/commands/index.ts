@@ -4,6 +4,8 @@ import { ticketCommands } from './tickets'
 import { giveawayCommands } from './giveaways'
 import { embedCommands } from './embeds'
 import { roleReactionCommands } from './roleReactions'
+import { setupCommands } from './setup'
+import { logsCommands } from './logs'
 import * as streamsCommand from './streams'
 import * as gamesCommand from './games'
 import * as gamehelpCommand from './gamehelp'
@@ -19,6 +21,8 @@ export const commands = [
   ...giveawayCommands,
   ...embedCommands,
   ...roleReactionCommands,
+  ...setupCommands,
+  ...logsCommands,
   streamsCommand,
   gamesCommand,
   gamehelpCommand,

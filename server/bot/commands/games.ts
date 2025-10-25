@@ -111,15 +111,15 @@ async function handleSearch(interaction: ChatInputCommandInteraction) {
       });
     }
 
-    console.log(`Found ${searchResults.count} games. First result ID: ${searchResults.results[0]?.id}`);
+    console.log(`Found ${searchResults.count} games. Showing top 5 in dropdown.`);
 
     if (searchResults.results.length === 1) {
       // If only one result, show detailed info directly
       return await showGameDetails(interaction, searchResults.results[0]);
     }
 
-    // Create selection menu for multiple results
-    const options = searchResults.results.slice(0, 10).map((game, index) => 
+    // Create selection menu for multiple results (limit to 5 options)
+    const options = searchResults.results.slice(0, 5).map((game, index) => 
       new StringSelectMenuOptionBuilder()
         .setLabel(game.name.length > 100 ? game.name.substring(0, 97) + '...' : game.name)
         .setDescription(`${game.released || 'Unknown year'} • Rating: ${gameAPI.formatRating(game.rating, game.rating_top)}`)
@@ -172,8 +172,8 @@ async function handleSearch(interaction: ChatInputCommandInteraction) {
           }
           
           const platformsStr = platformsList && platformsList.length > 0
-            ? gameAPI.formatPlatforms(platformsList as any).substring(0, 1024)
-            : '❓ No platform data';
+            ? gameAPI.formatPlatforms(platformsList as any, 'inline').substring(0, 1024)
+            : 'No platform data';
           
           return {
             name: `${index + 1}. ${game.name}`,
@@ -351,7 +351,10 @@ async function showGameDetails(interaction: ChatInputCommandInteraction, game: G
       gameAPI.getGameScreenshots(game.id)
     ]);
 
-    const gameInfo = detailedGame || game;
+    let gameInfo = detailedGame || game;
+
+    // Enrich game data from multiple APIs
+    gameInfo = await gameAPI.enrichGameData(gameInfo);
 
     const embed = new EmbedBuilder()
       .setColor(gameAPI.getRatingColor(gameInfo.rating))
@@ -375,9 +378,6 @@ async function showGameDetails(interaction: ChatInputCommandInteraction, game: G
       embed.addFields({ name: '📊 Metacritic', value: `${gameInfo.metacritic}/100`, inline: true });
     }
 
-    // Add spacing break
-    embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
-
     // Genres
     if (gameInfo.genres && (gameInfo.genres as any[]).length > 0) {
       const genreList = (gameInfo.genres as any[]).slice(0, 5).map((g: any) => g.name || g).join(', ');
@@ -390,9 +390,6 @@ async function showGameDetails(interaction: ChatInputCommandInteraction, game: G
       embed.addFields({ name: '🎮 Platforms', value: platforms, inline: false });
     }
 
-    // Add spacing break
-    embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
-
     // Developers and Publishers on separate lines
     if (gameInfo.developers && (gameInfo.developers as any[]).length > 0) {
       const devList = (gameInfo.developers as any[]).slice(0, 3).map((d: any) => d.name || d).join(', ');
@@ -403,26 +400,19 @@ async function showGameDetails(interaction: ChatInputCommandInteraction, game: G
       embed.addFields({ name: '🏢 Publishers', value: pubList, inline: false });
     }
 
-    // Playtime and ESRB
-    if (gameInfo.playtime || gameInfo.esrb_rating) {
-      const otherInfo: string[] = [];
-      if (gameInfo.playtime) {
-        otherInfo.push(`**⏱️ Avg. Playtime:** ${gameInfo.playtime} hours`);
-      }
-      if (gameInfo.esrb_rating) {
-        // Handle both string and object formats for ESRB rating
-        const esrbDisplay = typeof gameInfo.esrb_rating === 'string'
-          ? gameInfo.esrb_rating
-          : (gameInfo.esrb_rating as any)?.slug || (gameInfo.esrb_rating as any)?.name || 'N/A';
-        otherInfo.push(`**🔞 ESRB:** ${esrbDisplay}`);
-      }
-      if (otherInfo.length > 0) {
-        embed.addFields({ name: 'Additional Info', value: otherInfo.join('\n'), inline: false });
-      }
+    // Playtime (from combined API data)
+    if (gameInfo.playtime) {
+      embed.addFields({ name: '⏱️ Average Playtime', value: `${gameInfo.playtime} hours`, inline: false });
     }
 
-    // Add spacing break before description
-    embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
+    // ESRB Rating
+    if (gameInfo.esrb_rating) {
+      // Handle both string and object formats for ESRB rating
+      const esrbDisplay = typeof gameInfo.esrb_rating === 'string'
+        ? gameInfo.esrb_rating
+        : (gameInfo.esrb_rating as any)?.slug || (gameInfo.esrb_rating as any)?.name || 'N/A';
+      embed.addFields({ name: '🔞 ESRB Rating', value: esrbDisplay, inline: false });
+    }
 
     // Description/Synopsis
     if ((gameInfo as any).description_raw || gameInfo.description || gameInfo.synopsis) {
@@ -548,11 +538,11 @@ async function showGameList(interaction: ChatInputCommandInteraction, games: Gam
 
   const fields = games.map((game, index) => {
     const rating = gameAPI.formatRating(game.rating, game.rating_top);
-    const platforms = game.platforms ? gameAPI.formatPlatforms(game.platforms) : '❓ Unknown';
+    const platforms = game.platforms ? gameAPI.formatPlatforms(game.platforms, 'inline') : 'Unknown';
     
     return {
       name: `${index + 1}. ${game.name}`,
-      value: `**📅 Released:** ${game.released || 'Unknown'}\n**⭐ Rating:** ${rating}\n**🎮 Platforms:** ${platforms.substring(0, 300)}${platforms.length > 300 ? '...' : ''}`,
+      value: `**📅 Released:** ${game.released || 'Unknown'}\n**⭐ Rating:** ${rating}\n**Platforms:** ${platforms.substring(0, 300)}${platforms.length > 300 ? '...' : ''}`,
       inline: false
     };
   });

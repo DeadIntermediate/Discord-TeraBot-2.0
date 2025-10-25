@@ -1,10 +1,12 @@
 import { 
   users, discordServers, discordUsers, serverMembers, 
   moderationLogs, tickets, giveaways, roleReactions,
+  loggingConfig, botLogs,
   type User, type InsertUser, type DiscordServer, type InsertDiscordServer,
   type DiscordUser, type InsertDiscordUser, type ServerMember, type InsertServerMember,
   type ModerationLog, type InsertModerationLog, type Ticket, type InsertTicket,
-  type Giveaway, type InsertGiveaway, type RoleReaction, type InsertRoleReaction
+  type Giveaway, type InsertGiveaway, type RoleReaction, type InsertRoleReaction,
+  type LoggingConfig, type InsertLoggingConfig, type BotLog, type InsertBotLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc } from "drizzle-orm";
@@ -56,6 +58,18 @@ export interface IStorage {
   getRoleReaction(messageId: string, emoji: string): Promise<RoleReaction | undefined>;
   getMessageRoleReactions(messageId: string): Promise<RoleReaction[]>;
   deleteRoleReaction(id: string): Promise<boolean>;
+  
+  // Logging Config methods
+  getLoggingConfig(serverId: string): Promise<LoggingConfig | undefined>;
+  createLoggingConfig(config: InsertLoggingConfig): Promise<LoggingConfig>;
+  updateLoggingConfig(serverId: string, updates: Partial<LoggingConfig>): Promise<LoggingConfig | undefined>;
+  deleteLoggingConfig(serverId: string): Promise<boolean>;
+  
+  // Bot Log methods
+  createBotLog(log: InsertBotLog): Promise<BotLog>;
+  getBotLogs(serverId: string, limit?: number): Promise<BotLog[]>;
+  getBotLogsByCategory(serverId: string, category: string, limit?: number): Promise<BotLog[]>;
+  
   // Embed templates
   createSavedEmbed(embed: { serverId: string; name: string; embedData: any; createdBy: string; }): Promise<any>;
 }
@@ -260,6 +274,55 @@ export class DatabaseStorage implements IStorage {
   async deleteRoleReaction(id: string): Promise<boolean> {
     const result = await db.delete(roleReactions).where(eq(roleReactions.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Logging Config methods
+  async getLoggingConfig(serverId: string): Promise<LoggingConfig | undefined> {
+    const [config] = await db.select().from(loggingConfig).where(eq(loggingConfig.serverId, serverId));
+    return config || undefined;
+  }
+
+  async createLoggingConfig(config: InsertLoggingConfig): Promise<LoggingConfig> {
+    const [newConfig] = await db.insert(loggingConfig).values(config).returning();
+    return newConfig;
+  }
+
+  async updateLoggingConfig(serverId: string, updates: Partial<LoggingConfig>): Promise<LoggingConfig | undefined> {
+    const [updated] = await db
+      .update(loggingConfig)
+      .set(updates)
+      .where(eq(loggingConfig.serverId, serverId))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteLoggingConfig(serverId: string): Promise<boolean> {
+    const result = await db.delete(loggingConfig).where(eq(loggingConfig.serverId, serverId));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Bot Log methods
+  async createBotLog(log: InsertBotLog): Promise<BotLog> {
+    const [newLog] = await db.insert(botLogs).values(log).returning();
+    return newLog;
+  }
+
+  async getBotLogs(serverId: string, limit: number = 50): Promise<BotLog[]> {
+    return db
+      .select()
+      .from(botLogs)
+      .where(eq(botLogs.serverId, serverId))
+      .orderBy(desc(botLogs.createdAt))
+      .limit(limit);
+  }
+
+  async getBotLogsByCategory(serverId: string, category: string, limit: number = 50): Promise<BotLog[]> {
+    return db
+      .select()
+      .from(botLogs)
+      .where(and(eq(botLogs.serverId, serverId), eq(botLogs.category, category)))
+      .orderBy(desc(botLogs.createdAt))
+      .limit(limit);
   }
 
   // Embed templates (placeholder implementation)

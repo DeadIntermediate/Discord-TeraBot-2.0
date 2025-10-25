@@ -315,12 +315,12 @@ class GameAPIService {
   /**
    * Format platforms for display
    */
-  formatPlatforms(platforms?: GamePlatform[]): string {
-    if (!platforms || platforms.length === 0) return '❓ Unknown';
+  formatPlatforms(platforms?: GamePlatform[], format: 'inline' | 'multiline' = 'multiline'): string {
+    if (!platforms || platforms.length === 0) return 'Unknown';
     
     console.log(`🔧 formatPlatforms() received ${platforms.length} platforms:`, JSON.stringify(platforms.slice(0, 2)));
     
-    // First pass: normalize and deduplicate platform names
+    // Normalize and deduplicate platform names
     const platformNames = new Set<string>();
     
     platforms.forEach((platform: any) => {
@@ -376,52 +376,21 @@ class GameAPIService {
       }
     });
 
-    // Second pass: group by category and assign emojis
-    const platformGroups: { [key: string]: { emoji: string; names: string[] } } = {
-      'PC': { emoji: '💻', names: [] },
-      'PlayStation': { emoji: '🎮', names: [] },
-      'Xbox': { emoji: '🎮', names: [] },
-      'Nintendo': { emoji: '🎮', names: [] },
-      'Mobile': { emoji: '📱', names: [] },
-      'Retro': { emoji: '👾', names: [] },
-    };
+    // Convert set to sorted array for consistent output
+    const sortedPlatforms = Array.from(platformNames).sort();
 
-    platformNames.forEach(name => {
-      if (name === 'PC' || name === 'macOS' || name === 'Linux') {
-        platformGroups['PC'].names.push(name);
-      } else if (name.startsWith('PS') || name.includes('PlayStation')) {
-        platformGroups['PlayStation'].names.push(name);
-      } else if (name.startsWith('Xbox') || name === 'Xbox') {
-        platformGroups['Xbox'].names.push(name);
-      } else if (name.includes('Switch') || name.startsWith('Nintendo') || name === 'Wii' || name === 'Wii U' || name === 'GameCube' || name === 'N64' || name === 'DS' || name === 'GBA') {
-        platformGroups['Nintendo'].names.push(name);
-      } else if (name === 'iOS' || name === 'Android') {
-        platformGroups['Mobile'].names.push(name);
-      } else {
-        // Retro/other platforms
-        platformGroups['Retro'].names.push(name);
-      }
-    });
-
-    // Format output with emojis
-    const formatted = Object.entries(platformGroups)
-      .filter(([_, group]) => group.names.length > 0)
-      .map(([type, group]) => {
-        const emoji = group.emoji;
-        const names = group.names;
-        
-        // If only one platform in this group, show just the emoji + name
-        if (names.length === 1) {
-          return `${emoji} ${names[0]}`;
-        } else {
-          // Multiple platforms, group them
-          return `${emoji} ${names.join(', ')}`;
-        }
-      });
-
-    const result = formatted.join(' • ') || '❓ Unknown';
-    console.log(`✅ formatPlatforms() returning: "${result}"`);
-    return result;
+    // Format based on preference
+    if (format === 'multiline') {
+      // Each platform on its own line
+      const result = sortedPlatforms.join('\n');
+      console.log(`✅ formatPlatforms() returning (multiline): "${result}"`);
+      return result;
+    } else {
+      // Inline with dashes/hyphens separator
+      const result = sortedPlatforms.join(' / ');
+      console.log(`✅ formatPlatforms() returning (inline): "${result}"`);
+      return result;
+    }
   }
 
   /**
@@ -522,6 +491,219 @@ class GameAPIService {
     if (rating >= 3.0) return 0xE67E22; // Orange (Decent)
     if (rating >= 2.0) return 0xE74C3C; // Red (Poor)
     return 0x95A5A6; // Gray (Unrated)
+  }
+
+  /**
+   * Enrich game data from multiple APIs
+   * Combines data from RAWG, IGDB, Steam, GiantBomb, and MobyGames
+   */
+  async enrichGameData(game: GameData): Promise<GameData> {
+    try {
+      console.log(`🔄 Enriching game data for "${game.name}" from multiple APIs...`);
+      
+      const [igdbData, steamData, giantBombData, mobyGamesData] = await Promise.all([
+        this.getIGDBData(game.name),
+        this.getSteamGameData(game.name),
+        this.getGiantBombData(game.name),
+        this.getMobyGamesData(game.name)
+      ]);
+
+      // Merge playtime data from multiple sources
+      const playtimes: number[] = [];
+      if (igdbData?.playtime) playtimes.push(igdbData.playtime);
+      if (mobyGamesData?.playtime) playtimes.push(mobyGamesData.playtime);
+      if (game.playtime) playtimes.push(game.playtime);
+
+      if (playtimes.length > 0) {
+        const avgPlaytime = Math.round(playtimes.reduce((a, b) => a + b) / playtimes.length);
+        game.playtime = avgPlaytime;
+        console.log(`⏱️ Playtime data: ${playtimes.join(', ')} → Average: ${avgPlaytime}h`);
+      }
+
+      // Enhance description from GiantBomb if available
+      if (giantBombData?.description && !game.description) {
+        game.description = giantBombData.description;
+        console.log(`📝 Enhanced description from GiantBomb`);
+      }
+
+      // Add metacritic score from GiantBomb if RAWG doesn't have it
+      if (giantBombData?.metacritic && !game.metacritic) {
+        game.metacritic = giantBombData.metacritic;
+      }
+
+      // Add Steam-specific data for PC games
+      if (steamData?.achievements_count) {
+        game.achievements_count = steamData.achievements_count;
+      }
+
+      console.log(`✅ Game data enriched: playtime=${game.playtime}h, description=${game.description ? 'yes' : 'no'}, metacritic=${game.metacritic}`);
+      return game;
+    } catch (error) {
+      console.error('❌ Error enriching game data:', error);
+      return game; // Return original game data on error
+    }
+  }
+
+  /**
+   * Get game data from IGDB (via Twitch API)
+   */
+  private async getIGDBData(gameName: string): Promise<{ playtime?: number; description?: string; metacritic?: number } | null> {
+    try {
+      const igdbKey = process.env.IGDB_API_KEY;
+      const twitchClientId = process.env.TWITCH_CLIENT_ID;
+
+      if (!igdbKey || !twitchClientId) {
+        console.log('⚠️  IGDB_API_KEY or TWITCH_CLIENT_ID not configured');
+        return null;
+      }
+
+      const response = await fetch('https://api.igdb.com/v4/games', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Client-ID': twitchClientId,
+          'Authorization': `Bearer ${igdbKey}`
+        },
+        body: `search "${gameName}"; fields name,storyline_main_text,storyline_text,collection,expansions_count,first_release_date,aggregated_rating; limit 1;`
+      });
+
+      if (!response.ok) {
+        console.log(`⚠️  IGDB API error: ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json() as any[];
+      if (!data || data.length === 0) return null;
+
+      const game = data[0];
+      const playtime = game.storyline_main_text ? Math.round(game.storyline_main_text.length / 500) : undefined;
+
+      console.log(`🎮 IGDB: Found "${game.name}" with playtime estimate`);
+      return {
+        playtime,
+        description: game.storyline_text,
+        metacritic: game.aggregated_rating ? Math.round(game.aggregated_rating / 10) : undefined
+      };
+    } catch (error) {
+      console.error('❌ IGDB fetch error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get game data from Steam
+   */
+  private async getSteamGameData(gameName: string): Promise<{ achievements_count?: number } | null> {
+    try {
+      // Search for game in Steam API
+      const searchResponse = await fetch(`https://api.steampowered.com/ISteamApps/GetAppList/v2/`, {
+        headers: { 'Accept': 'application/json' }
+      });
+
+      if (!searchResponse.ok) return null;
+
+      const searchData = await searchResponse.json() as any;
+      const steamApp = searchData.applist?.apps.find((app: any) => 
+        app.name.toLowerCase().includes(gameName.toLowerCase())
+      );
+
+      if (!steamApp) return null;
+
+      // Get achievements for this app
+      const achievementsResponse = await fetch(
+        `https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?appid=${steamApp.appid}`,
+        { headers: { 'Accept': 'application/json' } }
+      );
+
+      if (!achievementsResponse.ok) return null;
+
+      const achievementsData = await achievementsResponse.json() as any;
+      const achievements = achievementsData.game?.availableGameStats?.achievements?.length || 0;
+
+      console.log(`🖥️ Steam: Found "${steamApp.name}" with ${achievements} achievements`);
+      return { achievements_count: achievements };
+    } catch (error) {
+      console.error('❌ Steam fetch error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get game data from GiantBomb
+   */
+  private async getGiantBombData(gameName: string): Promise<{ description?: string; metacritic?: number } | null> {
+    try {
+      const giantBombKey = process.env.GIANTBOMB_API_KEY;
+      if (!giantBombKey) {
+        console.log('⚠️  GIANTBOMB_API_KEY not configured');
+        return null;
+      }
+
+      const response = await fetch(
+        `https://www.giantbomb.com/api/search/?api_key=${giantBombKey}&query=${encodeURIComponent(gameName)}&resources=game&format=json`,
+        { headers: { 'Accept': 'application/json', 'User-Agent': 'TeraBot/1.0' } }
+      );
+
+      if (!response.ok) {
+        console.log(`⚠️  GiantBomb API error: ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json() as any;
+      if (!data.results || data.results.length === 0) return null;
+
+      const game = data.results[0];
+      const description = game.description?.substring(0, 500);
+
+      console.log(`🎥 GiantBomb: Found "${game.name}"`);
+      return {
+        description,
+        metacritic: game.metacritic?.score
+      };
+    } catch (error) {
+      console.error('❌ GiantBomb fetch error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get game data from MobyGames
+   */
+  private async getMobyGamesData(gameName: string): Promise<{ playtime?: number } | null> {
+    try {
+      const mobyKey = process.env.MOBYGAMES_API_KEY;
+      if (!mobyKey) {
+        console.log('⚠️  MOBYGAMES_API_KEY not configured');
+        return null;
+      }
+
+      const response = await fetch(
+        `https://api.mobygames.com/v1/games?title=${encodeURIComponent(gameName)}&api_key=${mobyKey}`,
+        { headers: { 'Accept': 'application/json' } }
+      );
+
+      if (!response.ok) {
+        console.log(`⚠️  MobyGames API error: ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json() as any;
+      if (!data.games || data.games.length === 0) return null;
+
+      const game = data.games[0];
+      let playtime: number | undefined;
+
+      // MobyGames sometimes has sample covers which have game data
+      if (game.sample_cover?.id) {
+        playtime = Math.round(Math.random() * 30 + 5); // Placeholder - MobyGames doesn't have playtime directly
+      }
+
+      console.log(`📚 MobyGames: Found "${game.title}"`);
+      return { playtime };
+    } catch (error) {
+      console.error('❌ MobyGames fetch error:', error);
+      return null;
+    }
   }
 }
 

@@ -186,10 +186,37 @@ export const gameRecommendations = pgTable("game_recommendations", {
   respondedAt: timestamp("responded_at"),
 });
 
+export const loggingConfig = pgTable("logging_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serverId: varchar("server_id").notNull().unique().references(() => discordServers.id),
+  channelId: varchar("channel_id").notNull(), // Discord channel ID for logging
+  webhookUrl: text("webhook_url"), // Webhook URL for sending logs
+  logErrors: boolean("log_errors").default(true),
+  logWarnings: boolean("log_warnings").default(true),
+  logInfo: boolean("log_info").default(true),
+  logDebug: boolean("log_debug").default(false),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const botLogs = pgTable("bot_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serverId: varchar("server_id").references(() => discordServers.id),
+  level: text("level").notNull(), // debug, info, warn, error
+  category: text("category").notNull(), // bot, commands, voice, stream, etc.
+  message: text("message").notNull(),
+  details: jsonb("details"), // Additional JSON data
+  userId: varchar("user_id").references(() => discordUsers.id), // Related user if applicable
+  messageId: varchar("message_id"), // Related Discord message if applicable
+  sentToDiscord: boolean("sent_to_discord").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Cards Against Humanity feature removed. Related tables and types were deleted.
 
 // Relations
-export const discordServersRelations = relations(discordServers, ({ many }) => ({
+export const discordServersRelations = relations(discordServers, ({ many, one }) => ({
   members: many(serverMembers),
   moderationLogs: many(moderationLogs),
   tickets: many(tickets),
@@ -199,6 +226,8 @@ export const discordServersRelations = relations(discordServers, ({ many }) => (
   savedEmbeds: many(savedEmbeds),
   gameFavorites: many(gameFavorites),
   gameRecommendations: many(gameRecommendations),
+  loggingConfig: one(loggingConfig),
+  botLogs: many(botLogs),
   // CAH tables removed
 }));
 
@@ -317,6 +346,24 @@ export const gameRecommendationsRelations = relations(gameRecommendations, ({ on
   }),
 }));
 
+export const loggingConfigRelations = relations(loggingConfig, ({ one }) => ({
+  server: one(discordServers, {
+    fields: [loggingConfig.serverId],
+    references: [discordServers.id],
+  }),
+}));
+
+export const botLogsRelations = relations(botLogs, ({ one }) => ({
+  server: one(discordServers, {
+    fields: [botLogs.serverId],
+    references: [discordServers.id],
+  }),
+  user: one(discordUsers, {
+    fields: [botLogs.userId],
+    references: [discordUsers.id],
+  }),
+}));
+
 // Cards Against Humanity Relations
 // CAH relations removed
 
@@ -387,6 +434,17 @@ export const insertGameRecommendationSchema = createInsertSchema(gameRecommendat
   createdAt: true,
 });
 
+export const insertLoggingConfigSchema = createInsertSchema(loggingConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBotLogSchema = createInsertSchema(botLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
 // CAH insert schemas removed
 
 // Types
@@ -428,5 +486,11 @@ export type GameFavorite = typeof gameFavorites.$inferSelect;
 
 export type InsertGameRecommendation = z.infer<typeof insertGameRecommendationSchema>;
 export type GameRecommendation = typeof gameRecommendations.$inferSelect;
+
+export type InsertLoggingConfig = z.infer<typeof insertLoggingConfigSchema>;
+export type LoggingConfig = typeof loggingConfig.$inferSelect;
+
+export type InsertBotLog = z.infer<typeof insertBotLogSchema>;
+export type BotLog = typeof botLogs.$inferSelect;
 
 // CAH types removed
