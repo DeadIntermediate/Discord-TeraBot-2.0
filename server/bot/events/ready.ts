@@ -2,6 +2,7 @@ import { Client, Events } from 'discord.js';
 import { storage } from '../../storage';
 import { pool } from '../../db';
 import { info, debug, warn, error } from '../../utils/logger';
+import { getRandomStatus, getRandomInterval } from '../../utils/botStatuses.js';
 
 export async function readyHandler(client: Client) {
   // ASCII Art Banner (debug-only)
@@ -80,8 +81,32 @@ export async function readyHandler(client: Client) {
   }
   debug('');
 
-  // Set bot activity
-  client.user?.setActivity('Discord servers', { type: 3 }); // Type 3 = Watching
+  // Set bot activity with rotating status
+  const initialStatus = getRandomStatus();
+  client.user?.setActivity(initialStatus.text, { type: initialStatus.type });
+  
+  // Rotate status at random intervals (1 second to 2 hours)
+  const scheduleNextStatusChange = () => {
+    const nextInterval = getRandomInterval();
+    const hours = Math.floor(nextInterval / (60 * 60 * 1000));
+    const minutes = Math.floor((nextInterval % (60 * 60 * 1000)) / (60 * 1000));
+    const seconds = Math.floor((nextInterval % (60 * 1000)) / 1000);
+    
+    let timeDisplay = '';
+    if (hours > 0) timeDisplay += `${hours}h `;
+    if (minutes > 0) timeDisplay += `${minutes}m `;
+    if (seconds > 0) timeDisplay += `${seconds}s`;
+    
+    debug(`⏰ Next status change in: ${timeDisplay.trim()}`);
+    
+    setTimeout(() => {
+      const randomStatus = getRandomStatus();
+      client.user?.setActivity(randomStatus.text, { type: randomStatus.type });
+      scheduleNextStatusChange(); // Schedule the next change
+    }, nextInterval);
+  };
+  
+  scheduleNextStatusChange();
 
   // Initialize servers in database
   debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

@@ -50,6 +50,64 @@ const setupCommand = {
             .setDescription('Log debug messages (verbose)')
             .setRequired(false)
         )
+    )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('backup_create')
+        .setDescription('Create a backup of guild roles and channels')
+        .addStringOption(option =>
+          option
+            .setName('name')
+            .setDescription('Name for this backup')
+            .setRequired(true)
+            .setMaxLength(100)
+        )
+        .addStringOption(option =>
+          option
+            .setName('description')
+            .setDescription('Optional description for this backup')
+            .setRequired(false)
+            .setMaxLength(500)
+        )
+    )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('backup_list')
+        .setDescription('List all available backups for this server')
+    )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('backup_restore')
+        .setDescription('Restore a backup of roles and channels')
+        .addStringOption(option =>
+          option
+            .setName('backup_id')
+            .setDescription('ID of the backup to restore')
+            .setRequired(true)
+        )
+        .addBooleanOption(option =>
+          option
+            .setName('restore_roles')
+            .setDescription('Restore roles (default: true)')
+            .setRequired(false)
+        )
+        .addBooleanOption(option =>
+          option
+            .setName('restore_channels')
+            .setDescription('Restore channels (default: true)')
+            .setRequired(false)
+        )
+    )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('backup_delete')
+        .setDescription('Delete a backup')
+        .addStringOption(option =>
+          option
+            .setName('backup_id')
+            .setDescription('ID of the backup to delete')
+            .setRequired(true)
+        )
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
@@ -339,6 +397,239 @@ const setupCommand = {
         console.error('Error creating bot role:', error);
         await interaction.editReply({ 
           content: '❌ An error occurred while creating the role. Make sure the bot has the "Manage Roles" permission.' 
+        });
+      }
+      return;
+    }
+
+    if (subcommand === 'backup_create') {
+      if (!interaction.guild) {
+        await interaction.reply({ 
+          content: 'This command can only be used in a server.', 
+          flags: MessageFlags.Ephemeral 
+        });
+        return;
+      }
+
+      if (interaction.guild.ownerId !== interaction.user.id) {
+        await interaction.reply({ 
+          content: '❌ Only the server owner can create backups.', 
+          flags: MessageFlags.Ephemeral 
+        });
+        return;
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      try {
+        const { createGuildBackup } = await import('../../utils/backupManager.js');
+        const name = interaction.options.getString('name', true);
+        const description = interaction.options.getString('description', false) || undefined;
+        const userId = interaction.user.id;
+
+        const backupId = await createGuildBackup(interaction.guild, userId, name, description);
+
+        if (!backupId) {
+          await interaction.editReply({ 
+            content: '❌ Failed to create backup. Check bot logs for details.' 
+          });
+          return;
+        }
+
+        const embed = new EmbedBuilder()
+          .setColor(0x4caf50)
+          .setTitle('✅ Backup Created Successfully')
+          .setDescription(`A new backup of **${interaction.guild.name}** has been created.`)
+          .addFields(
+            { name: '📋 Backup Name', value: name, inline: true },
+            { name: '🆔 Backup ID', value: `\`${backupId}\``, inline: true },
+            { name: '👤 Created By', value: `<@${userId}>`, inline: true },
+            { name: '⏰ Timestamp', value: new Date().toLocaleString(), inline: false }
+          );
+
+        if (description) {
+          embed.addFields({ name: '📝 Description', value: description });
+        }
+
+        embed.setFooter({ text: 'Use /setup backup_restore to restore this backup' });
+
+        await interaction.editReply({ embeds: [embed] });
+      } catch (error) {
+        console.error('Error creating backup:', error);
+        await interaction.editReply({ 
+          content: '❌ An error occurred while creating the backup.' 
+        });
+      }
+      return;
+    }
+
+    if (subcommand === 'backup_list') {
+      if (!interaction.guild) {
+        await interaction.reply({ 
+          content: 'This command can only be used in a server.', 
+          flags: MessageFlags.Ephemeral 
+        });
+        return;
+      }
+
+      if (interaction.guild.ownerId !== interaction.user.id) {
+        await interaction.reply({ 
+          content: '❌ Only the server owner can view backups.', 
+          flags: MessageFlags.Ephemeral 
+        });
+        return;
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      try {
+        const backups = await storage.getGuildBackups(interaction.guild.id, 50);
+
+        if (backups.length === 0) {
+          const embed = new EmbedBuilder()
+            .setColor(0x2196f3)
+            .setTitle('📚 Guild Backups')
+            .setDescription('No backups found for this server.')
+            .setFooter({ text: 'Use /setup backup_create to create a new backup' });
+
+          await interaction.editReply({ embeds: [embed] });
+          return;
+        }
+
+        const embed = new EmbedBuilder()
+          .setColor(0x2196f3)
+          .setTitle(`📚 Guild Backups (${backups.length})`)
+          .setDescription('Available backups for this server:');
+
+        for (const backup of backups.slice(0, 25)) {
+          const metadata = backup.metadata as { guildName: string; timestamp: string; memberCount: number } | null;
+          const timestamp = metadata?.timestamp ? new Date(metadata.timestamp).toLocaleString() : 'Unknown';
+          const fields = backup.rolesData ? Object.keys(backup.rolesData).length : 0;
+
+          embed.addFields({
+            name: `📦 ${backup.name}`,
+            value: `**ID:** \`${backup.id}\`\n**Created:** ${timestamp}\n**Description:** ${backup.description || 'None'}\n**Data Snapshot:** ${fields} fields`,
+            inline: false
+          });
+        }
+
+        embed.setFooter({ 
+          text: backups.length > 25 ? `Showing 25 of ${backups.length} backups` : 'Use backup IDs to restore or delete' 
+        });
+
+        await interaction.editReply({ embeds: [embed] });
+      } catch (error) {
+        console.error('Error listing backups:', error);
+        await interaction.editReply({ 
+          content: '❌ An error occurred while retrieving backups.' 
+        });
+      }
+      return;
+    }
+
+    if (subcommand === 'backup_restore') {
+      if (!interaction.guild) {
+        await interaction.reply({ 
+          content: 'This command can only be used in a server.', 
+          flags: MessageFlags.Ephemeral 
+        });
+        return;
+      }
+
+      if (interaction.guild.ownerId !== interaction.user.id) {
+        await interaction.reply({ 
+          content: '❌ Only the server owner can restore backups.', 
+          flags: MessageFlags.Ephemeral 
+        });
+        return;
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      try {
+        const { restoreGuildBackup } = await import('../../utils/backupManager.js');
+        const backupId = interaction.options.getString('backup_id', true);
+        const restoreRoles = interaction.options.getBoolean('restore_roles') ?? true;
+        const restoreChannels = interaction.options.getBoolean('restore_channels') ?? true;
+        const userId = interaction.user.id;
+
+        const result = await restoreGuildBackup(interaction.guild, backupId, userId, restoreRoles, restoreChannels);
+
+        const embed = new EmbedBuilder()
+          .setColor(result.success ? 0x4caf50 : 0xff9800)
+          .setTitle(result.success ? '✅ Backup Restored' : '⚠️ Backup Restore Completed with Issues')
+          .setDescription(`Restore process completed for **${interaction.guild.name}**`)
+          .addFields(
+            { name: '✅ Restored', value: String(result.restored), inline: true },
+            { name: '❌ Failed', value: String(result.failed), inline: true },
+            { name: '📥 Restore Roles', value: restoreRoles ? 'Yes' : 'No', inline: true },
+            { name: '📥 Restore Channels', value: restoreChannels ? 'Yes' : 'No', inline: true }
+          );
+
+        if (result.errors.length > 0) {
+          const errorText = result.errors.slice(0, 5).join('\n');
+          embed.addFields({
+            name: `⚠️ Errors (${result.errors.length})`,
+            value: `\`\`\`${errorText}${result.errors.length > 5 ? '\n...' : ''}\`\`\``
+          });
+        }
+
+        embed.setFooter({ text: 'Some items may have been skipped if they already exist' });
+
+        await interaction.editReply({ embeds: [embed] });
+      } catch (error) {
+        console.error('Error restoring backup:', error);
+        await interaction.editReply({ 
+          content: '❌ An error occurred while restoring the backup.' 
+        });
+      }
+      return;
+    }
+
+    if (subcommand === 'backup_delete') {
+      if (!interaction.guild) {
+        await interaction.reply({ 
+          content: 'This command can only be used in a server.', 
+          flags: MessageFlags.Ephemeral 
+        });
+        return;
+      }
+
+      if (interaction.guild.ownerId !== interaction.user.id) {
+        await interaction.reply({ 
+          content: '❌ Only the server owner can delete backups.', 
+          flags: MessageFlags.Ephemeral 
+        });
+        return;
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      try {
+        const backupId = interaction.options.getString('backup_id', true);
+        const success = await storage.deleteGuildBackup(backupId);
+
+        if (!success) {
+          await interaction.editReply({ 
+            content: '❌ Backup not found or could not be deleted.' 
+          });
+          return;
+        }
+
+        const embed = new EmbedBuilder()
+          .setColor(0xff5722)
+          .setTitle('✅ Backup Deleted')
+          .setDescription('The backup has been permanently deleted.')
+          .addFields(
+            { name: '🆔 Backup ID', value: `\`${backupId}\`` }
+          )
+          .setFooter({ text: 'This action cannot be undone' });
+
+        await interaction.editReply({ embeds: [embed] });
+      } catch (error) {
+        console.error('Error deleting backup:', error);
+        await interaction.editReply({ 
+          content: '❌ An error occurred while deleting the backup.' 
         });
       }
     }

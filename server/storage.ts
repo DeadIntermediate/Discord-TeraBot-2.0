@@ -1,12 +1,13 @@
 import { 
   users, discordServers, discordUsers, serverMembers, 
   moderationLogs, tickets, giveaways, roleReactions,
-  loggingConfig, botLogs,
+  loggingConfig, botLogs, guildBackups, backupRestoreHistory,
   type User, type InsertUser, type DiscordServer, type InsertDiscordServer,
   type DiscordUser, type InsertDiscordUser, type ServerMember, type InsertServerMember,
   type ModerationLog, type InsertModerationLog, type Ticket, type InsertTicket,
   type Giveaway, type InsertGiveaway, type RoleReaction, type InsertRoleReaction,
-  type LoggingConfig, type InsertLoggingConfig, type BotLog, type InsertBotLog
+  type LoggingConfig, type InsertLoggingConfig, type BotLog, type InsertBotLog,
+  type GuildBackup, type InsertGuildBackup, type BackupRestoreHistory, type InsertBackupRestoreHistory
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc } from "drizzle-orm";
@@ -69,6 +70,17 @@ export interface IStorage {
   createBotLog(log: InsertBotLog): Promise<BotLog>;
   getBotLogs(serverId: string, limit?: number): Promise<BotLog[]>;
   getBotLogsByCategory(serverId: string, category: string, limit?: number): Promise<BotLog[]>;
+
+  // Guild Backup methods
+  createGuildBackup(backup: InsertGuildBackup): Promise<GuildBackup>;
+  getGuildBackup(id: string): Promise<GuildBackup | undefined>;
+  getGuildBackups(serverId: string, limit?: number): Promise<GuildBackup[]>;
+  deleteGuildBackup(id: string): Promise<boolean>;
+
+  // Backup Restore History methods
+  createBackupRestoreHistory(history: InsertBackupRestoreHistory): Promise<string>;
+  updateBackupRestoreHistory(id: string, updates: Partial<BackupRestoreHistory>): Promise<BackupRestoreHistory | undefined>;
+  getBackupRestoreHistory(serverId: string, limit?: number): Promise<BackupRestoreHistory[]>;
   
   // Embed templates
   createSavedEmbed(embed: { serverId: string; name: string; embedData: any; createdBy: string; }): Promise<any>;
@@ -322,6 +334,55 @@ export class DatabaseStorage implements IStorage {
       .from(botLogs)
       .where(and(eq(botLogs.serverId, serverId), eq(botLogs.category, category)))
       .orderBy(desc(botLogs.createdAt))
+      .limit(limit);
+  }
+
+  // Guild Backup methods
+  async createGuildBackup(backup: InsertGuildBackup): Promise<GuildBackup> {
+    const [newBackup] = await db.insert(guildBackups).values(backup).returning();
+    return newBackup;
+  }
+
+  async getGuildBackup(id: string): Promise<GuildBackup | undefined> {
+    const [backup] = await db.select().from(guildBackups).where(eq(guildBackups.id, id));
+    return backup;
+  }
+
+  async getGuildBackups(serverId: string, limit: number = 20): Promise<GuildBackup[]> {
+    return db
+      .select()
+      .from(guildBackups)
+      .where(eq(guildBackups.serverId, serverId))
+      .orderBy(desc(guildBackups.createdAt))
+      .limit(limit);
+  }
+
+  async deleteGuildBackup(id: string): Promise<boolean> {
+    const result = await db.delete(guildBackups).where(eq(guildBackups.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Backup Restore History methods
+  async createBackupRestoreHistory(history: InsertBackupRestoreHistory): Promise<string> {
+    const [newHistory] = await db.insert(backupRestoreHistory).values(history).returning();
+    return newHistory.id;
+  }
+
+  async updateBackupRestoreHistory(id: string, updates: Partial<BackupRestoreHistory>): Promise<BackupRestoreHistory | undefined> {
+    const [updated] = await db
+      .update(backupRestoreHistory)
+      .set(updates)
+      .where(eq(backupRestoreHistory.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getBackupRestoreHistory(serverId: string, limit: number = 20): Promise<BackupRestoreHistory[]> {
+    return db
+      .select()
+      .from(backupRestoreHistory)
+      .where(eq(backupRestoreHistory.serverId, serverId))
+      .orderBy(desc(backupRestoreHistory.createdAt))
       .limit(limit);
   }
 

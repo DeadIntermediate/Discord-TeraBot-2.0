@@ -1,6 +1,7 @@
 import { Interaction, ChatInputCommandInteraction, ButtonInteraction, EmbedBuilder } from 'discord.js';
 import { storage } from '../../storage';
 import { handleEmbedBuilderInteraction } from '../commands/embeds';
+import { handleStreamButtons, handleStreamModal } from '../commands/streams';
 
 export async function interactionCreateHandler(interaction: Interaction) {
   if (interaction.isChatInputCommand()) {
@@ -50,6 +51,12 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
       return;
     }
 
+    // Check for stream button interactions
+    if (customId.startsWith('stream_add_')) {
+      await handleStreamButtons(interaction);
+      return;
+    }
+
     // CAH feature removed — no routing necessary
 
     if (customId.startsWith('ticket_close_')) {
@@ -82,6 +89,12 @@ async function handleModalInteraction(interaction: any) {
     // Check for embed builder modals
     if (interaction.customId.startsWith('embed_')) {
       await handleEmbedBuilderInteraction(interaction);
+      return;
+    }
+
+    // Check for stream modals
+    if (interaction.customId.startsWith('stream_modal_')) {
+      await handleStreamModal(interaction);
       return;
     }
 

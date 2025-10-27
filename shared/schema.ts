@@ -213,6 +213,32 @@ export const botLogs = pgTable("bot_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const guildBackups = pgTable("guild_backups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serverId: varchar("server_id").notNull().references(() => discordServers.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  createdBy: varchar("created_by").notNull().references(() => discordUsers.id),
+  rolesData: jsonb("roles_data").notNull(), // Array of role backups
+  channelsData: jsonb("channels_data").notNull(), // Array of channel backups
+  metadata: jsonb("metadata"), // Guild name, icon, etc at backup time
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at"), // Optional expiration for auto-cleanup
+});
+
+export const backupRestoreHistory = pgTable("backup_restore_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serverId: varchar("server_id").notNull().references(() => discordServers.id),
+  backupId: varchar("backup_id").notNull().references(() => guildBackups.id),
+  restoredBy: varchar("restored_by").notNull().references(() => discordUsers.id),
+  status: text("status").notNull(), // pending, in-progress, completed, failed
+  itemsRestored: integer("items_restored").default(0), // Number of roles/channels restored
+  itemsFailed: integer("items_failed").default(0), // Number of failures
+  errorDetails: jsonb("error_details"), // Any errors that occurred
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
 // Cards Against Humanity feature removed. Related tables and types were deleted.
 
 // Relations
@@ -228,6 +254,8 @@ export const discordServersRelations = relations(discordServers, ({ many, one })
   gameRecommendations: many(gameRecommendations),
   loggingConfig: one(loggingConfig),
   botLogs: many(botLogs),
+  guildBackups: many(guildBackups),
+  backupHistory: many(backupRestoreHistory),
   // CAH tables removed
 }));
 
@@ -367,6 +395,32 @@ export const botLogsRelations = relations(botLogs, ({ one }) => ({
 // Cards Against Humanity Relations
 // CAH relations removed
 
+export const guildBackupsRelations = relations(guildBackups, ({ one }) => ({
+  server: one(discordServers, {
+    fields: [guildBackups.serverId],
+    references: [discordServers.id],
+  }),
+  creator: one(discordUsers, {
+    fields: [guildBackups.createdBy],
+    references: [discordUsers.id],
+  }),
+}));
+
+export const backupRestoreHistoryRelations = relations(backupRestoreHistory, ({ one }) => ({
+  server: one(discordServers, {
+    fields: [backupRestoreHistory.serverId],
+    references: [discordServers.id],
+  }),
+  backup: one(guildBackups, {
+    fields: [backupRestoreHistory.backupId],
+    references: [guildBackups.id],
+  }),
+  restorer: one(discordUsers, {
+    fields: [backupRestoreHistory.restoredBy],
+    references: [discordUsers.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -445,6 +499,17 @@ export const insertBotLogSchema = createInsertSchema(botLogs).omit({
   createdAt: true,
 });
 
+export const insertGuildBackupSchema = createInsertSchema(guildBackups).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBackupRestoreHistorySchema = createInsertSchema(backupRestoreHistory).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
 // CAH insert schemas removed
 
 // Types
@@ -492,5 +557,11 @@ export type LoggingConfig = typeof loggingConfig.$inferSelect;
 
 export type InsertBotLog = z.infer<typeof insertBotLogSchema>;
 export type BotLog = typeof botLogs.$inferSelect;
+
+export type InsertGuildBackup = z.infer<typeof insertGuildBackupSchema>;
+export type GuildBackup = typeof guildBackups.$inferSelect;
+
+export type InsertBackupRestoreHistory = z.infer<typeof insertBackupRestoreHistorySchema>;
+export type BackupRestoreHistory = typeof backupRestoreHistory.$inferSelect;
 
 // CAH types removed

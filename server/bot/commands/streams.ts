@@ -5,7 +5,13 @@ import {
   EmbedBuilder,
   TextChannel,
   ChannelType,
-  MessageFlags
+  MessageFlags,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle
 } from 'discord.js';
 import { db } from '../../db';
 import { discordServers, streamNotifications, discordUsers } from '../../../shared/schema';
@@ -126,59 +132,6 @@ async function handleAddMe(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  // Fetch the user with connected accounts
-  const user = await interaction.user.fetch(true);
-  const connections: { platform: string; username: string; id: string }[] = [];
-
-  // Check user's profile activities for streaming
-  const member = await interaction.guild.members.fetch(interaction.user.id);
-  
-  // Check user's presence/activities for streaming
-  if (member.presence?.activities) {
-    for (const activity of member.presence.activities) {
-      if (activity.type === 1) { // Streaming activity
-        if (activity.url) {
-          // Parse Twitch URLs
-          if (activity.url.includes('twitch.tv/')) {
-            const username = activity.url.split('twitch.tv/')[1]?.split('/')[0];
-            if (username) {
-              connections.push({ platform: 'twitch', username, id: '' });
-            }
-          }
-          // Parse YouTube URLs
-          else if (activity.url.includes('youtube.com/') || activity.url.includes('youtu.be/')) {
-            const username = activity.name || 'Unknown';
-            connections.push({ platform: 'youtube', username, id: '' });
-          }
-          // Parse Kick URLs
-          else if (activity.url.includes('kick.com/')) {
-            const username = activity.url.split('kick.com/')[1]?.split('/')[0];
-            if (username) {
-              connections.push({ platform: 'kick', username, id: '' });
-            }
-          }
-        }
-      }
-    }
-  }
-
-  if (connections.length === 0) {
-    await interaction.editReply({
-      content: `❌ No streaming platforms detected in your Discord profile!\n\n` +
-        `**Why this happens:**\n` +
-        `• Discord bots can only detect streaming accounts when you are actively streaming, due to Discord API limitations\n` +
-        `• If your accounts are connected but you are not streaming, the bot cannot detect them automatically\n\n` +
-        `**Quickest solution:** Use the manual command instead:\n` +
-        `\`/stream add platform:twitch username:YourUsername\`\n\n` +
-        `**Other options:**\n` +
-        `1. Start streaming on Twitch/YouTube/Kick\n` +
-        `2. Try the \`/stream addme\` command again while streaming\n\n` +
-        `Or ask an admin to add you with the manual command:\n` +
-        `\`/stream add platform:twitch username:YourUsername\` (replace with your platform and username).`,
-    });
-    return;
-  }
-
   // Ensure user exists in database
   await db.insert(discordUsers).values({
     id: interaction.user.id,
@@ -195,65 +148,56 @@ async function handleAddMe(interaction: ChatInputCommandInteraction) {
     },
   });
 
-  // Add all detected connections
-  const added: string[] = [];
-  const alreadyExists: string[] = [];
-
-  for (const connection of connections) {
-    // Check if already exists
-    const existing = await db
-      .select()
-      .from(streamNotifications)
-      .where(
-        and(
-          eq(streamNotifications.serverId, interaction.guild.id),
-          eq(streamNotifications.platform, connection.platform),
-          eq(streamNotifications.username, connection.username)
-        )
-      )
-      .limit(1);
-
-    if (existing.length > 0) {
-      alreadyExists.push(`${connection.platform}: ${connection.username}`);
-      continue;
-    }
-
-    // Add to database
-    await db.insert(streamNotifications).values({
-      serverId: interaction.guild.id,
-      userId: interaction.user.id,
-      channelId: server.streamNotificationChannelId,
-      platform: connection.platform,
-      username: connection.username,
-      platformUserId: connection.id,
-      isActive: true,
-      isLive: false,
-    });
-
-    added.push(`${connection.platform}: ${connection.username}`);
-  }
-
+  // Create embed with instructions
   const embed = new EmbedBuilder()
     .setColor(0x9B59B6)
-    .setTitle('✅ Stream Notifications Updated')
-    .setDescription(`Your streaming accounts have been added to notifications in <#${server.streamNotificationChannelId}>!`)
-    .setTimestamp();
+    .setTitle('🎬 Add Your Streaming Accounts')
+    .setDescription(
+      `To get stream notifications, you need to add your streaming accounts.\n\n` +
+      `**Note:** Discord's API doesn't allow bots to read your connected accounts directly for privacy reasons.\n\n` +
+      `Click below to add your streaming accounts manually (it's quick!):`
+    )
+    .addFields(
+      {
+        name: '📝 How it works:',
+        value:
+          '1. Click the button for your streaming platform\n' +
+          '2. Enter your username\n' +
+          '3. Done! We\'ll notify when you go live',
+        inline: false
+      },
+      {
+        name: '🎥 Supported Platforms:',
+        value: '• Twitch\n• YouTube\n• Kick',
+        inline: false
+      }
+    )
+    .setFooter({ text: 'Your accounts are safe and only used for stream notifications' });
 
-  if (added.length > 0) {
-    embed.addFields({
-      name: '✅ Added',
-      value: added.join('\n'),
-    });
-  }
+  // Create buttons for each platform
+  const row = new ActionRowBuilder<ButtonBuilder>()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId('stream_add_twitch')
+        .setLabel('Add Twitch')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('📺'),
+      new ButtonBuilder()
+        .setCustomId('stream_add_youtube')
+        .setLabel('Add YouTube')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('▶️'),
+      new ButtonBuilder()
+        .setCustomId('stream_add_kick')
+        .setLabel('Add Kick')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('🎮')
+    );
 
-  if (alreadyExists.length > 0) {
-    embed.addFields({
-      name: 'ℹ️ Already Tracking',
-      value: alreadyExists.join('\n'),
-    });
-  }
-
-  await interaction.editReply({ embeds: [embed] });
+  await interaction.editReply({ 
+    embeds: [embed],
+    components: [row]
+  });
 }
 
 async function handleAdd(interaction: ChatInputCommandInteraction) {
@@ -504,4 +448,128 @@ async function handleSetup(interaction: ChatInputCommandInteraction) {
         .setTimestamp()
     ]
   });
+}
+
+// Button interaction handlers
+export async function handleStreamButtons(interaction: any) {
+  if (!interaction.isButton()) return;
+
+  const customId = interaction.customId;
+  if (!customId.startsWith('stream_add_')) return;
+
+  const platform = customId.replace('stream_add_', '');
+  const validPlatforms = ['twitch', 'youtube', 'kick'];
+  
+  if (!validPlatforms.includes(platform)) return;
+
+  // Show modal for username input
+  const modal = new ModalBuilder()
+    .setCustomId(`stream_modal_${platform}_${interaction.user.id}`)
+    .setTitle(`Add ${platform.charAt(0).toUpperCase() + platform.slice(1)} Account`);
+
+  const usernameInput = new TextInputBuilder()
+    .setCustomId('stream_username')
+    .setLabel(`${platform.charAt(0).toUpperCase() + platform.slice(1)} Username`)
+    .setPlaceholder(`Enter your ${platform} username`)
+    .setStyle(TextInputStyle.Short)
+    .setMinLength(3)
+    .setMaxLength(50)
+    .setRequired(true);
+
+  const row = new ActionRowBuilder<TextInputBuilder>().addComponents(usernameInput);
+  modal.addComponents(row);
+
+  await interaction.showModal(modal);
+}
+
+// Modal submission handler
+export async function handleStreamModal(interaction: any) {
+  if (!interaction.isModalSubmit()) return;
+
+  const customId = interaction.customId;
+  if (!customId.startsWith('stream_modal_')) return;
+
+  const [, platform, userId] = customId.split('_');
+  
+  // Verify user
+  if (interaction.user.id !== userId) {
+    await interaction.reply({ 
+      content: '❌ This modal is not for you!',
+      flags: MessageFlags.Ephemeral 
+    });
+    return;
+  }
+
+  const username = interaction.fields.getTextInputValue('stream_username');
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  if (!interaction.guild) {
+    await interaction.editReply('This command can only be used in a server!');
+    return;
+  }
+
+  // Get server
+  const [server] = await db
+    .select()
+    .from(discordServers)
+    .where(eq(discordServers.id, interaction.guild.id))
+    .limit(1);
+
+  if (!server?.streamNotificationChannelId) {
+    await interaction.editReply({
+      content: '❌ Stream notifications are not set up in this server!',
+    });
+    return;
+  }
+
+  // Check if already exists
+  const existing = await db
+    .select()
+    .from(streamNotifications)
+    .where(
+      and(
+        eq(streamNotifications.serverId, interaction.guild.id),
+        eq(streamNotifications.platform, platform),
+        eq(streamNotifications.username, username)
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    await interaction.editReply({
+      content: `ℹ️ **${username}** on **${platform}** is already being tracked!`,
+    });
+    return;
+  }
+
+  // Add to database
+  try {
+    await db.insert(streamNotifications).values({
+      serverId: interaction.guild.id,
+      userId: interaction.user.id,
+      channelId: server.streamNotificationChannelId,
+      platform: platform,
+      username: username,
+      platformUserId: '',
+      isActive: true,
+      isLive: false,
+    });
+
+    const embed = new EmbedBuilder()
+      .setColor(0x2ECC71)
+      .setTitle('✅ Account Added Successfully!')
+      .setDescription(`**${username}** on **${platform}** is now being tracked for stream notifications.`)
+      .addFields(
+        { name: '📢 Notifications', value: `When you go live on ${platform}, this server will be notified in <#${server.streamNotificationChannelId}>`, inline: false }
+      )
+      .setFooter({ text: 'Remove with /stream remove' });
+
+    await interaction.editReply({ embeds: [embed] });
+  } catch (error) {
+    console.error('Error adding stream notification:', error);
+    await interaction.editReply({
+      content: '❌ An error occurred while adding your account. Please try again.',
+    });
+  }
 }
