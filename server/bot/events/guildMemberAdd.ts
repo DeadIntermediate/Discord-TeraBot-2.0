@@ -23,27 +23,56 @@ export async function guildMemberAddHandler(member: GuildMember) {
       });
     }
 
-    // Create server member record
-    await storage.createServerMember({
-      serverId: member.guild.id,
-      userId: member.id,
-    });
+    // Create server member record or check if returning member
+    let isReturningMember = false;
+    let hasJoinedBefore = false;
+    let firstJoinedAt: Date | undefined;
+    try {
+      const existingMember = await storage.getServerMember(member.guild.id, member.id);
+
+      if (existingMember) {
+        hasJoinedBefore = true;
+        if (existingMember.joinedAt) {
+          firstJoinedAt = existingMember.joinedAt;
+        }
+      }
+
+      if (existingMember && existingMember.leftAt) {
+        // This member has rejoined
+        isReturningMember = true;
+        await storage.updateServerMember(member.guild.id, member.id, {
+          leftAt: null, // Clear the left date
+        });
+      } else if (!existingMember) {
+        // New member
+        await storage.createServerMember({
+          serverId: member.guild.id,
+          userId: member.id,
+        });
+      }
+    } catch (dbError: any) {
+      error('Failed to sync server member record:', dbError);
+      // If database error occurs, try to create a basic member record
+      // This handles cases where schema columns may not exist yet
+      try {
+        await storage.createServerMember({
+          serverId: member.guild.id,
+          userId: member.id,
+        });
+      } catch (createError) {
+        error('Failed to create server member record:', createError);
+      }
+    }
 
     // Send welcome message
     const channel = member.guild.channels.cache.get(server.welcomeChannelId) as TextChannel;
     
     if (channel) {
-      const welcomeMessage = server.welcomeMessage || 
-        `Welcome to **{serverName}**, {mention}! We're excited to have you here!`;
-
-      // Replace placeholders in welcome message
-      const formattedMessage = welcomeMessage
-        .replace('{mention}', member.toString())
-        .replace('{username}', member.user.username)
-        .replace('{displayName}', member.displayName)
-        .replace('{tag}', member.user.tag)
-        .replace('{serverName}', member.guild.name)
-        .replace('{memberCount}', member.guild.memberCount.toString());
+      // Get member stats for the guild
+      const guildMembers = await member.guild.members.fetch();
+      const totalMembers = guildMembers.size;
+      const botCount = guildMembers.filter(m => m.user.bot).size;
+      const humanCount = totalMembers - botCount;
 
       // Check account age for potential security warnings
       const accountAge = Date.now() - member.user.createdAt.getTime();
@@ -55,17 +84,31 @@ export async function guildMemberAddHandler(member: GuildMember) {
         accountAgeWarning = '⚠️ **New Account Warning** - This account is newer than the server\'s minimum age requirement.';
       }
 
+      const memberTypeIndicator = isReturningMember ? '🔄 **RETURNING MEMBER**' : '✨ **NEW MEMBER**';
+      const statusBadge = isReturningMember ? '[RETURNING]' : '[NEW]';
+      const joinedBeforeValue = (isReturningMember || hasJoinedBefore) ? '✅ Yes' : '❌ No';
+      const firstJoinedValue = firstJoinedAt
+        ? `<t:${Math.floor(firstJoinedAt.getTime() / 1000)}:F>`
+        : '—';
+      const greetingPrefix = isReturningMember ? 'Welcome back' : 'Welcome';
+
       const embed = new EmbedBuilder()
-        .setColor(accountAgeWarning ? 0xffa500 : 0x5865f2) // Orange if warning, blue otherwise
-        .setTitle('👋 Welcome to the Server!')
-        .setDescription(formattedMessage)
+        .setColor(accountAgeWarning ? 0xffa500 : (isReturningMember ? 0x9c27b0 : 0x5865f2)) // Orange if warning, purple if returning, blue if new
+        .setTitle(`👋 ${memberTypeIndicator}`)
+        .setDescription(`${greetingPrefix} ${member.toString()} to **${member.guild.name}**!`)
         .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
         .addFields(
-          { name: '� User Info', value: `${member.user.tag}\nID: ${member.id}`, inline: true },
-          { name: '� Member Count', value: `${member.guild.memberCount} members`, inline: true },
-          { name: '📅 Account Created', value: `<t:${Math.floor(member.user.createdAt.getTime() / 1000)}:R>`, inline: true }
+          { name: '👤 Member Name', value: `${member.user.username}`, inline: true },
+          { name: '🏷️ Account Created', value: `<t:${Math.floor(member.user.createdAt.getTime() / 1000)}:R>`, inline: true },
+          { name: '🆔 User ID', value: `\`${member.id}\``, inline: true },
+          { name: '📋 Member Status', value: memberTypeIndicator, inline: true },
+          { name: '🔁 Joined Before', value: joinedBeforeValue, inline: true },
+          ...(firstJoinedAt ? [{ name: '🗓️ First Joined', value: firstJoinedValue, inline: true }] : []),
+          { name: '👥 Member Count', value: `${humanCount} members`, inline: true },
+          { name: '🤖 Bot Count', value: `${botCount} bots`, inline: true },
+          { name: '📊 Total Count', value: `${totalMembers} total`, inline: true }
         )
-        .setFooter({ text: `Member #${member.guild.memberCount} • Welcome to ${member.guild.name}` })
+        .setFooter({ text: `Member #${totalMembers} ${statusBadge} • ${member.guild.name}` })
         .setTimestamp();
 
       // Add warning field if account is too new
@@ -88,7 +131,7 @@ export async function guildMemberAddHandler(member: GuildMember) {
       }
 
       await channel.send({ 
-  content: (server as any).settings?.pingOnWelcome ? member.toString() : undefined,
+        content: (server as any).settings?.pingOnWelcome ? member.toString() : undefined,
         embeds: [embed] 
       });
     }
@@ -98,7 +141,7 @@ export async function guildMemberAddHandler(member: GuildMember) {
       memberCount: member.guild.memberCount,
     });
 
-    info(`New member joined ${member.guild.name}: ${member.user.tag}`);
+    info(`${isReturningMember ? 'Returning' : 'New'} member joined ${member.guild.name}: ${member.user.tag}`);
   } catch (error) {
     const { error: logError } = await import('../../utils/logger');
     logError('Error handling guild member add:', error);

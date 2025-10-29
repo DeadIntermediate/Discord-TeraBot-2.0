@@ -26,20 +26,6 @@ const setupCommand = {
             .addChannelTypes(ChannelType.GuildText)
             .setRequired(true)
         )
-        .addStringOption(option =>
-          option
-            .setName('welcome_message')
-            .setDescription('Custom welcome message (use {mention}, {username}, {serverName} placeholders)')
-            .setRequired(false)
-            .setMaxLength(500)
-        )
-        .addStringOption(option =>
-          option
-            .setName('leave_message')
-            .setDescription('Custom leave message (use {username}, {displayName} placeholders)')
-            .setRequired(false)
-            .setMaxLength(500)
-        )
         .addBooleanOption(option =>
           option
             .setName('show_leave_messages')
@@ -241,30 +227,26 @@ const setupCommand = {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       try {
-        const channel = interaction.options.getChannel('channel', true) as any;
-        const customWelcomeMessage = interaction.options.getString('welcome_message', false);
-        const customLeaveMessage = interaction.options.getString('leave_message', false);
+        const channel = interaction.options.getChannel('channel', true);
         const showLeaveMessages = interaction.options.getBoolean('show_leave_messages') ?? true;
 
-        if (!channel.isText?.()) {
+        // Verify the channel is a text channel (shouldn't be needed since we restricted it, but just in case)
+        if (!channel || channel.type !== ChannelType.GuildText) {
           await interaction.editReply({ 
             content: '❌ The channel must be a text channel.' 
           });
           return;
         }
 
-        // Update server settings
+        // Update server settings with default messages
         const server = await storage.getDiscordServer(interaction.guild.id);
         const currentSettings = (server?.settings as any) || {};
         
         await storage.updateDiscordServer(interaction.guild.id, {
           welcomeChannelId: channel.id,
-          welcomeMessage: customWelcomeMessage || (server?.welcomeMessage || 'Welcome to **{serverName}**, {mention}! We\'re excited to have you here!'),
           settings: {
             ...currentSettings,
             showLeaveMessages,
-            leaveMessage: customLeaveMessage || currentSettings.leaveMessage || '**{username}** has left the server. We\'ll miss you!',
-            welcomeFields: currentSettings.welcomeFields,
           },
         });
 
@@ -275,26 +257,10 @@ const setupCommand = {
           .addFields(
             { name: '📺 Channel', value: `<#${channel.id}>`, inline: true },
             { name: '👋 Welcome Messages', value: '✅ Enabled', inline: true },
-            { name: '👋 Leave Messages', value: showLeaveMessages ? '✅ Enabled' : '❌ Disabled', inline: true }
-          );
-
-        if (customWelcomeMessage) {
-          embed.addFields({ name: '📝 Welcome Message', value: `\`${customWelcomeMessage}\``, inline: false });
-        } else {
-          embed.addFields({ name: '📝 Welcome Message', value: 'Using default message', inline: false });
-        }
-
-        if (customLeaveMessage) {
-          embed.addFields({ name: '📝 Leave Message', value: `\`${customLeaveMessage}\``, inline: false });
-        } else if (showLeaveMessages) {
-          embed.addFields({ name: '📝 Leave Message', value: 'Using default message', inline: false });
-        }
-
-        embed.addFields(
-          { name: '📋 Available Placeholders', value: '**Welcome:** {mention}, {username}, {displayName}, {tag}, {serverName}, {memberCount}\n**Leave:** {username}, {displayName}, {tag}, {memberCount}', inline: false }
-        );
-
-        embed.setFooter({ text: 'Welcome announcements are now active!' });
+            { name: '👋 Leave Messages', value: showLeaveMessages ? '✅ Enabled' : '❌ Disabled', inline: true },
+            { name: '� Messages', value: 'Using default announcement format', inline: false }
+          )
+          .setFooter({ text: 'Welcome announcements are now active!' });
 
         await interaction.editReply({ embeds: [embed] });
       } catch (error) {

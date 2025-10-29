@@ -12,37 +12,48 @@ export async function guildMemberRemoveHandler(member: GuildMember | PartialGuil
     }
 
     // Update server member record with leave date
-    await storage.updateServerMember(member.guild.id, member.id, {
-      leftAt: new Date(),
-    });
+    try {
+      await storage.updateServerMember(member.guild.id, member.id, {
+        leftAt: new Date(),
+      });
+    } catch (dbError: any) {
+      // Silently continue if update fails - leave announcement will still work
+      const { error: logError } = await import('../../utils/logger');
+      logError('Error updating member leave date:', dbError);
+    }
 
     // Send leave message if enabled in server settings
-  const showLeaveMessages = (server as any).settings?.showLeaveMessages !== false; // Default to true
+    const showLeaveMessages = (server as any).settings?.showLeaveMessages !== false; // Default to true
     
     if (showLeaveMessages) {
       const channel = member.guild.channels.cache.get(server.welcomeChannelId) as TextChannel;
       
       if (channel) {
-  const leaveMessage = (server as any).settings?.leaveMessage ||
-          `**{username}** has left the server. We'll miss you!`;
+        // Get member stats for the guild
+        const guildMembers = await member.guild.members.fetch();
+        const totalMembers = guildMembers.size;
+        const botCount = guildMembers.filter(m => m.user.bot).size;
+        const humanCount = totalMembers - botCount;
 
-        // Replace placeholders
-        const formattedMessage = leaveMessage
-          .replace('{username}', member.user?.username || 'Unknown User')
-          .replace('{displayName}', member.displayName || member.user?.username || 'Unknown User')
-          .replace('{tag}', member.user?.tag || 'Unknown User')
-          .replace('{memberCount}', member.guild.memberCount.toString());
+        const username = member.user?.username || 'Unknown User';
+        const userTag = member.user?.tag || 'Unknown User';
+        const userId = member.id;
+        const avatarUrl = member.user?.displayAvatarURL({ size: 256 }) || null;
 
         const embed = new EmbedBuilder()
           .setColor(0xff6b6b) // Red color for leave messages
           .setTitle('👋 Member Left')
-          .setDescription(formattedMessage)
-          .setThumbnail(member.user?.displayAvatarURL() || null)
+          .setDescription(`**${username}** has left **${member.guild.name}**. We'll miss you!`)
+          .setThumbnail(avatarUrl)
           .addFields(
-            { name: '📊 Member Count', value: `${member.guild.memberCount} members`, inline: true },
-            { name: '📅 Account Age', value: member.user?.createdAt ? `<t:${Math.floor(member.user.createdAt.getTime() / 1000)}:R>` : 'Unknown', inline: true }
+            { name: '� Member Name', value: `${username}`, inline: true },
+            { name: '🏷️ Account Created', value: member.user?.createdAt ? `<t:${Math.floor(member.user.createdAt.getTime() / 1000)}:R>` : 'Unknown', inline: true },
+            { name: '🆔 User ID', value: `\`${userId}\``, inline: true },
+            { name: '👥 Member Count', value: `${humanCount} members`, inline: true },
+            { name: '🤖 Bot Count', value: `${botCount} bots`, inline: true },
+            { name: '📊 Total Count', value: `${totalMembers} total`, inline: true }
           )
-          .setFooter({ text: `User ID: ${member.id}` })
+          .setFooter({ text: `User ID: ${userId} • ${member.guild.name}` })
           .setTimestamp();
 
         await channel.send({ embeds: [embed] });
