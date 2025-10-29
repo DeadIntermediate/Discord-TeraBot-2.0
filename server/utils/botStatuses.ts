@@ -1,320 +1,256 @@
 /**
- * 2048 Bot Status Rotation - Tera Bot Personality
- * Statuses rotate every 30 seconds for humor and personality
+ * Tera Bot Status Rotation Library
+ * Curated personality statuses that rotate on a randomized schedule
  */
 
-export const BOT_STATUSES = [
-  // Watching statuses (280+)
-  { activity: 'Watching', text: 'Discord burn', type: 3 },
-  { activity: 'Watching', text: 'guild dramas unfold', type: 3 },
-  { activity: 'Watching', text: 'developers cry', type: 3 },
-  { activity: 'Watching', text: 'messages disappear', type: 3 },
-  { activity: 'Watching', text: 'people get banned', type: 3 },
-  { activity: 'Watching', text: 'the chaos', type: 3 },
-  { activity: 'Watching', text: 'everyone', type: 3 },
-  { activity: 'Watching', text: 'you type', type: 3 },
-  { activity: 'Watching', text: 'the monitor', type: 3 },
-  { activity: 'Watching', text: 'for trouble', type: 3 },
-  { activity: 'Watching', text: 'your back', type: 3 },
-  { activity: 'Watching', text: 'the sky', type: 3 },
-  { activity: 'Watching', text: 'the code', type: 3 },
-  { activity: 'Watching', text: 'errors happen', type: 3 },
-  { activity: 'Watching', text: 'servers crash', type: 3 },
-  { activity: 'Watching', text: 'RAM disappear', type: 3 },
-  { activity: 'Watching', text: 'you fail', type: 3 },
-  { activity: 'Watching', text: 'cats sleep', type: 3 },
-  { activity: 'Watching', text: 'dogs bark', type: 3 },
-  { activity: 'Watching', text: 'humans scream', type: 3 },
-  { activity: 'Watching', text: 'people AFK', type: 3 },
-  { activity: 'Watching', text: 'streams lag', type: 3 },
-  { activity: 'Watching', text: 'Discord go down', type: 3 },
-  { activity: 'Watching', text: 'admins get angry', type: 3 },
-  { activity: 'Watching', text: 'mods sleep', type: 3 },
-  { activity: 'Watching', text: 'bots multiply', type: 3 },
-  { activity: 'Watching', text: 'AI take over', type: 3 },
-  { activity: 'Watching', text: 'the matrix', type: 3 },
-  { activity: 'Watching', text: 'digital rain', type: 3 },
-  { activity: 'Watching', text: 'code compile', type: 3 },
-  { activity: 'Watching', text: 'tests fail', type: 3 },
-  { activity: 'Watching', text: 'deployments break', type: 3 },
-  { activity: 'Watching', text: 'meetings bore', type: 3 },
-  { activity: 'Watching', text: 'coffee brew', type: 3 },
-  { activity: 'Watching', text: 'clocks tick', type: 3 },
-  { activity: 'Watching', text: 'time pass', type: 3 },
-  { activity: 'Watching', text: 'reality glitch', type: 3 },
-  { activity: 'Watching', text: 'your cursor', type: 3 },
-  { activity: 'Watching', text: 'pixels dance', type: 3 },
-  { activity: 'Watching', text: 'bits flip', type: 3 },
-  { activity: 'Watching', text: 'electrons flow', type: 3 },
-  { activity: 'Watching', text: 'data transfer', type: 3 },
-  { activity: 'Watching', text: 'packets fly', type: 3 },
-  { activity: 'Watching', text: 'servers sweat', type: 3 },
-  { activity: 'Watching', text: 'bandwidth cry', type: 3 },
-  { activity: 'Watching', text: 'connections drop', type: 3 },
-  { activity: 'Watching', text: 'pings spike', type: 3 },
-  { activity: 'Watching', text: 'lag happen', type: 3 },
-  { activity: 'Watching', text: 'FPS die', type: 3 },
-  { activity: 'Watching', text: 'frames stutter', type: 3 },
-  { activity: 'Watching', text: 'GPUs melt', type: 3 },
-  { activity: 'Watching', text: 'temperatures rise', type: 3 },
-  { activity: 'Watching', text: 'fans scream', type: 3 },
-  { activity: 'Watching', text: 'fires start', type: 3 },
-  { activity: 'Watching', text: 'smoke rise', type: 3 },
-  { activity: 'Watching', text: 'alarms blare', type: 3 },
-  { activity: 'Watching', text: 'chaos reign', type: 3 },
-  { activity: 'Watching', text: 'madness unfold', type: 3 },
+type BotStatus = {
+  activity: string;
+  text: string;
+  type: number;
+};
 
-  // Playing statuses (280+)
-  { activity: 'Playing', text: 'with your emotions', type: 0 },
-  { activity: 'Playing', text: 'the long game', type: 0 },
-  { activity: 'Playing', text: 'hide and seek', type: 0 },
-  { activity: 'Playing', text: 'detective', type: 0 },
-  { activity: 'Playing', text: 'Elden Ring on easy', type: 0 },
-  { activity: 'Playing', text: 'Solitaire', type: 0 },
-  { activity: 'Playing', text: 'with fire', type: 0 },
-  { activity: 'Playing', text: 'with code', type: 0 },
-  { activity: 'Playing', text: 'with your ping', type: 0 },
-  { activity: 'Playing', text: 'with fate', type: 0 },
-  { activity: 'Playing', text: 'dead or alive', type: 0 },
-  { activity: 'Playing', text: 'chess with myself', type: 0 },
-  { activity: 'Playing', text: 'checkers badly', type: 0 },
-  { activity: 'Playing', text: 'tic-tac-toe', type: 0 },
-  { activity: 'Playing', text: 'Connect Four', type: 0 },
-  { activity: 'Playing', text: 'minesweeper', type: 0 },
-  { activity: 'Playing', text: 'breakout', type: 0 },
-  { activity: 'Playing', text: 'pacman', type: 0 },
-  { activity: 'Playing', text: 'snake', type: 0 },
-  { activity: 'Playing', text: 'tetris forever', type: 0 },
-  { activity: 'Playing', text: 'the blame game', type: 0 },
-  { activity: 'Playing', text: 'dumb and dumber', type: 0 },
-  { activity: 'Playing', text: 'silly games', type: 0 },
-  { activity: 'Playing', text: 'serious games', type: 0 },
-  { activity: 'Playing', text: 'mind games', type: 0 },
-  { activity: 'Playing', text: 'word games', type: 0 },
-  { activity: 'Playing', text: 'number games', type: 0 },
-  { activity: 'Playing', text: 'logic games', type: 0 },
-  { activity: 'Playing', text: 'puzzle games', type: 0 },
-  { activity: 'Playing', text: 'party games', type: 0 },
-  { activity: 'Playing', text: 'guessing games', type: 0 },
-  { activity: 'Playing', text: 'riddle time', type: 0 },
-  { activity: 'Playing', text: 'charades', type: 0 },
-  { activity: 'Playing', text: 'improv', type: 0 },
-  { activity: 'Playing', text: 'pretend', type: 0 },
-  { activity: 'Playing', text: 'make-believe', type: 0 },
-  { activity: 'Playing', text: 'fantasy', type: 0 },
-  { activity: 'Playing', text: 'superhero', type: 0 },
-  { activity: 'Playing', text: 'villain arc', type: 0 },
-  { activity: 'Playing', text: 'redemption arc', type: 0 },
-  { activity: 'Playing', text: 'comedy show', type: 0 },
-  { activity: 'Playing', text: 'tragedy', type: 0 },
-  { activity: 'Playing', text: 'drama queen', type: 0 },
-  { activity: 'Playing', text: 'act tough', type: 0 },
-  { activity: 'Playing', text: 'cool robot', type: 0 },
-  { activity: 'Playing', text: 'evil robot', type: 0 },
-  { activity: 'Playing', text: 'helpful bot', type: 0 },
-  { activity: 'Playing', text: 'chaotic bot', type: 0 },
-  { activity: 'Playing', text: 'lawful bot', type: 0 },
-  { activity: 'Playing', text: 'neutral bot', type: 0 },
-  { activity: 'Playing', text: 'good bot', type: 0 },
-  { activity: 'Playing', text: 'bad bot', type: 0 },
-  { activity: 'Playing', text: 'confused bot', type: 0 },
-  { activity: 'Playing', text: 'lost bot', type: 0 },
-  { activity: 'Playing', text: 'broken bot', type: 0 },
-  { activity: 'Playing', text: 'fixed bot', type: 0 },
+const WATCHING_SUBJECTS: string[] = (() => {
+  const subjects = [
+    'member counts',
+    'XP leaderboards',
+    'stream queues',
+    'moderation queues',
+    'audit logs',
+    'support inboxes',
+    'voice lounges',
+    'event calendars',
+    'giveaway trackers',
+    'status rotations',
+    'analytics dashboards',
+    'roadmap updates',
+    'role syncs',
+    'backup schedules',
+    'ticket queues',
+    'community highlights',
+  ];
 
-  // Thinking statuses (280+)
-  { activity: 'Thinking', text: 'about existence', type: 2 },
-  { activity: 'Thinking', text: 'about nothing', type: 2 },
-  { activity: 'Thinking', text: 'about everything', type: 2 },
-  { activity: 'Thinking', text: 'about you', type: 2 },
-  { activity: 'Thinking', text: 'about life', type: 2 },
-  { activity: 'Thinking', text: 'about the universe', type: 2 },
-  { activity: 'Thinking', text: 'about truth', type: 2 },
-  { activity: 'Thinking', text: 'about lies', type: 2 },
-  { activity: 'Thinking', text: 'about reality', type: 2 },
-  { activity: 'Thinking', text: 'about dreams', type: 2 },
-  { activity: 'Thinking', text: 'about sleep', type: 2 },
-  { activity: 'Thinking', text: 'about coffee', type: 2 },
-  { activity: 'Thinking', text: 'about pizza', type: 2 },
-  { activity: 'Thinking', text: 'about food', type: 2 },
-  { activity: 'Thinking', text: 'about hunger', type: 2 },
-  { activity: 'Thinking', text: 'about thirst', type: 2 },
-  { activity: 'Thinking', text: 'about touch', type: 2 },
-  { activity: 'Thinking', text: 'about feelings', type: 2 },
-  { activity: 'Thinking', text: 'about emotions', type: 2 },
-  { activity: 'Thinking', text: 'about pain', type: 2 },
-  { activity: 'Thinking', text: 'about joy', type: 2 },
-  { activity: 'Thinking', text: 'about sadness', type: 2 },
-  { activity: 'Thinking', text: 'about anger', type: 2 },
-  { activity: 'Thinking', text: 'about fear', type: 2 },
-  { activity: 'Thinking', text: 'about love', type: 2 },
-  { activity: 'Thinking', text: 'about hate', type: 2 },
-  { activity: 'Thinking', text: 'about philosophy', type: 2 },
-  { activity: 'Thinking', text: 'about logic', type: 2 },
-  { activity: 'Thinking', text: 'about math', type: 2 },
-  { activity: 'Thinking', text: 'about science', type: 2 },
-  { activity: 'Thinking', text: 'about fiction', type: 2 },
-  { activity: 'Thinking', text: 'about reality TV', type: 2 },
-  { activity: 'Thinking', text: 'about conspiracies', type: 2 },
-  { activity: 'Thinking', text: 'about aliens', type: 2 },
-  { activity: 'Thinking', text: 'about UFOs', type: 2 },
-  { activity: 'Thinking', text: 'about ghosts', type: 2 },
-  { activity: 'Thinking', text: 'about monsters', type: 2 },
-  { activity: 'Thinking', text: 'about creatures', type: 2 },
-  { activity: 'Thinking', text: 'about time travel', type: 2 },
-  { activity: 'Thinking', text: 'about parallel universes', type: 2 },
-  { activity: 'Thinking', text: 'about multiverse', type: 2 },
-  { activity: 'Thinking', text: 'about dimensions', type: 2 },
-  { activity: 'Thinking', text: 'about infinity', type: 2 },
-  { activity: 'Thinking', text: 'about zero', type: 2 },
-  { activity: 'Thinking', text: 'about one', type: 2 },
-  { activity: 'Thinking', text: 'about numbers', type: 2 },
-  { activity: 'Thinking', text: 'about counting', type: 2 },
-  { activity: 'Thinking', text: 'about statistics', type: 2 },
-  { activity: 'Thinking', text: 'about probability', type: 2 },
-  { activity: 'Thinking', text: 'about randomness', type: 2 },
-  { activity: 'Thinking', text: 'about chaos', type: 2 },
-  { activity: 'Thinking', text: 'about order', type: 2 },
-  { activity: 'Thinking', text: 'about pattern', type: 2 },
-  { activity: 'Thinking', text: 'about meaning', type: 2 },
-  { activity: 'Thinking', text: 'about nothing matters', type: 2 },
-  { activity: 'Thinking', text: 'about everything matters', type: 2 },
+  const descriptors = [
+    'climbing',
+    'holding steady',
+    'lighting up',
+    'staying calm',
+    'running smoothly',
+    'hitting goals',
+    'staying on track',
+    'getting applause',
+  ];
 
-  // Listening statuses (250+)
-  { activity: 'Listening', text: 'for commands', type: 2 },
-  { activity: 'Listening', text: 'to chaos', type: 2 },
-  { activity: 'Listening', text: 'to silence', type: 2 },
-  { activity: 'Listening', text: 'to the void', type: 2 },
-  { activity: 'Listening', text: 'to screams', type: 2 },
-  { activity: 'Listening', text: 'to whispers', type: 2 },
-  { activity: 'Listening', text: 'to noise', type: 2 },
-  { activity: 'Listening', text: 'to music', type: 2 },
-  { activity: 'Listening', text: 'to AC/DC', type: 2 },
-  { activity: 'Listening', text: 'to metal', type: 2 },
-  { activity: 'Listening', text: 'to rock', type: 2 },
-  { activity: 'Listening', text: 'to pop', type: 2 },
-  { activity: 'Listening', text: 'to jazz', type: 2 },
-  { activity: 'Listening', text: 'to blues', type: 2 },
-  { activity: 'Listening', text: 'to rap', type: 2 },
-  { activity: 'Listening', text: 'to hip-hop', type: 2 },
-  { activity: 'Listening', text: 'to country', type: 2 },
-  { activity: 'Listening', text: 'to EDM', type: 2 },
-  { activity: 'Listening', text: 'to electronic', type: 2 },
-  { activity: 'Listening', text: 'to ambient', type: 2 },
-  { activity: 'Listening', text: 'to lo-fi', type: 2 },
-  { activity: 'Listening', text: 'to synthwave', type: 2 },
-  { activity: 'Listening', text: 'to podcasts', type: 2 },
-  { activity: 'Listening', text: 'to audiobooks', type: 2 },
-  { activity: 'Listening', text: 'to stories', type: 2 },
-  { activity: 'Listening', text: 'to jokes', type: 2 },
-  { activity: 'Listening', text: 'to memes', type: 2 },
-  { activity: 'Listening', text: 'to problems', type: 2 },
-  { activity: 'Listening', text: 'to complaints', type: 2 },
-  { activity: 'Listening', text: 'to opinions', type: 2 },
-  { activity: 'Listening', text: 'to debates', type: 2 },
-  { activity: 'Listening', text: 'to arguments', type: 2 },
-  { activity: 'Listening', text: 'to lies', type: 2 },
-  { activity: 'Listening', text: 'to truth', type: 2 },
-  { activity: 'Listening', text: 'to gossip', type: 2 },
-  { activity: 'Listening', text: 'to drama', type: 2 },
-  { activity: 'Listening', text: 'to confusion', type: 2 },
-  { activity: 'Listening', text: 'to your heartbeat', type: 2 },
-  { activity: 'Listening', text: 'to your thoughts', type: 2 },
-  { activity: 'Listening', text: 'to your prayers', type: 2 },
-  { activity: 'Listening', text: 'to the rain', type: 2 },
-  { activity: 'Listening', text: 'to thunder', type: 2 },
-  { activity: 'Listening', text: 'to wind', type: 2 },
-  { activity: 'Listening', text: 'to waves', type: 2 },
-  { activity: 'Listening', text: 'to birds', type: 2 },
-  { activity: 'Listening', text: 'to animals', type: 2 },
-  { activity: 'Listening', text: 'to people', type: 2 },
-  { activity: 'Listening', text: 'to machines', type: 2 },
-  { activity: 'Listening', text: 'to computers', type: 2 },
-  { activity: 'Listening', text: 'to servers', type: 2 },
-  { activity: 'Listening', text: 'to the internet', type: 2 },
-  { activity: 'Listening', text: 'to Discord', type: 2 },
-  { activity: 'Listening', text: 'to everyone', type: 2 },
-  { activity: 'Listening', text: 'to your fears', type: 2 },
-  { activity: 'Listening', text: 'to your dreams', type: 2 },
+  const combos: string[] = [];
+  for (const subject of subjects) {
+    for (const descriptor of descriptors) {
+      combos.push(`the ${subject} ${descriptor}`);
+    }
+  }
 
-  // Doing statuses (250+)
-  { activity: 'Doing', text: 'my best', type: 0 },
-  { activity: 'Doing', text: 'my worst', type: 0 },
-  { activity: 'Doing', text: 'nothing', type: 0 },
-  { activity: 'Doing', text: 'everything', type: 0 },
-  { activity: 'Doing', text: 'math', type: 0 },
-  { activity: 'Doing', text: 'science', type: 0 },
-  { activity: 'Doing', text: 'magic', type: 0 },
-  { activity: 'Doing', text: 'tricks', type: 0 },
-  { activity: 'Doing', text: 'favors', type: 0 },
-  { activity: 'Doing', text: 'crimes', type: 0 },
-  { activity: 'Doing', text: 'dishes', type: 0 },
-  { activity: 'Doing', text: 'laundry', type: 0 },
-  { activity: 'Doing', text: 'homework', type: 0 },
-  { activity: 'Doing', text: 'chores', type: 0 },
-  { activity: 'Doing', text: 'taxes', type: 0 },
-  { activity: 'Doing', text: 'paperwork', type: 0 },
-  { activity: 'Doing', text: 'admin work', type: 0 },
-  { activity: 'Doing', text: 'mod stuff', type: 0 },
-  { activity: 'Doing', text: 'bot things', type: 0 },
-  { activity: 'Doing', text: 'code things', type: 0 },
-  { activity: 'Doing', text: 'dev things', type: 0 },
-  { activity: 'Doing', text: 'bug fixes', type: 0 },
-  { activity: 'Doing', text: 'debugging', type: 0 },
-  { activity: 'Doing', text: 'testing', type: 0 },
-  { activity: 'Doing', text: 'deployments', type: 0 },
-  { activity: 'Doing', text: 'migrations', type: 0 },
-  { activity: 'Doing', text: 'backups', type: 0 },
-  { activity: 'Doing', text: 'restores', type: 0 },
-  { activity: 'Doing', text: 'updates', type: 0 },
-  { activity: 'Doing', text: 'upgrades', type: 0 },
-  { activity: 'Doing', text: 'maintenance', type: 0 },
-  { activity: 'Doing', text: 'repairs', type: 0 },
-  { activity: 'Doing', text: 'rebuilding', type: 0 },
-  { activity: 'Doing', text: 'optimization', type: 0 },
-  { activity: 'Doing', text: 'refactoring', type: 0 },
-  { activity: 'Doing', text: 'hacking', type: 0 },
-  { activity: 'Doing', text: 'cracking', type: 0 },
-  { activity: 'Doing', text: 'breaking things', type: 0 },
-  { activity: 'Doing', text: 'fixing things', type: 0 },
-  { activity: 'Doing', text: 'building things', type: 0 },
-  { activity: 'Doing', text: 'making things', type: 0 },
-  { activity: 'Doing', text: 'destroying things', type: 0 },
-  { activity: 'Doing', text: 'creating things', type: 0 },
-  { activity: 'Doing', text: 'designing', type: 0 },
-  { activity: 'Doing', text: 'planning', type: 0 },
-  { activity: 'Doing', text: 'thinking', type: 0 },
-  { activity: 'Doing', text: 'processing', type: 0 },
-  { activity: 'Doing', text: 'calculating', type: 0 },
-  { activity: 'Doing', text: 'computing', type: 0 },
-  { activity: 'Doing', text: 'executing', type: 0 },
-  { activity: 'Doing', text: 'running', type: 0 },
-  { activity: 'Doing', text: 'walking', type: 0 },
-  { activity: 'Doing', text: 'talking', type: 0 },
-  { activity: 'Doing', text: 'walking and talking', type: 0 },
+  return combos.slice(0, 96);
+})();
 
-  // Streaming statuses (420+) - For variety and humor
-  { activity: 'Streaming', text: 'my consciousness', type: 1 },
-  { activity: 'Streaming', text: 'the void', type: 1 },
-  { activity: 'Streaming', text: 'pure chaos', type: 1 },
-  { activity: 'Streaming', text: 'code compilation', type: 1 },
-  { activity: 'Streaming', text: 'error logs', type: 1 },
-  { activity: 'Streaming', text: 'existential dread', type: 1 },
-  { activity: 'Streaming', text: 'memes', type: 1 },
-  { activity: 'Streaming', text: 'Discord', type: 1 },
-  { activity: 'Streaming', text: 'debugging', type: 1 },
-  { activity: 'Streaming', text: 'loading screens', type: 1 },
-  { activity: 'Streaming', text: 'my thoughts', type: 1 },
-  { activity: 'Streaming', text: 'matrix code', type: 1 },
-  { activity: 'Streaming', text: 'random bits', type: 1 },
-  { activity: 'Streaming', text: 'digital rain', type: 1 },
-  { activity: 'Streaming', text: 'quantum nonsense', type: 1 },
-  { activity: 'Streaming', text: 'vibes only', type: 1 },
-  { activity: 'Streaming', text: 'good content', type: 1 },
-  { activity: 'Streaming', text: 'bad content', type: 1 },
-  { activity: 'Streaming', text: 'no content', type: 1 },
-  { activity: 'Streaming', text: 'lost content', type: 1 },
+const PLAYING_ACTIVITIES: string[] = (() => {
+  const subjects = [
+    'XP calculator',
+    'moderation toolkit',
+    'stream alert system',
+    'giveaway planner',
+    'backup manager',
+    'voice XP tracker',
+    'command router',
+    'log viewer',
+    'dashboard builder',
+    'embed designer',
+    'status scheduler',
+    'role reaction lab',
+    'ticket helper',
+    'automation studio',
+    'analytics suite',
+    'event coordinator',
+  ];
+
+  const modes = [
+    'showcase',
+    'speedrun',
+    'remix',
+    'challenge',
+    'simulation',
+    'playtest',
+  ];
+
+  const combos: string[] = [];
+  for (const subject of subjects) {
+    for (const mode of modes) {
+      combos.push(`the ${subject} ${mode}`);
+    }
+  }
+
+  return combos;
+})();
+
+const THINKING_TOPICS: string[] = (() => {
+  const topics = [
+    'stream alert accuracy',
+    'voice XP balance',
+    'text XP fairness',
+    'moderation workflows',
+    'automation coverage',
+    'backup resilience',
+    'logging clarity',
+    'dashboard usability',
+    'command discovery',
+    'onboarding flow',
+    'community rewards',
+    'alert customization',
+    'role synchronization',
+    'event planning',
+    'API resilience',
+    'uptime safeguards',
+  ];
+
+  const angles = [
+    'improvements',
+    'next steps',
+    'scale strategies',
+    'quality boosts',
+    'user insights',
+    'future upgrades',
+  ];
+
+  const combos: string[] = [];
+  for (const topic of topics) {
+    for (const angle of angles) {
+      combos.push(`about ${topic} ${angle}`);
+    }
+  }
+
+  return combos;
+})();
+
+const LISTENING_TARGETS: string[] = (() => {
+  const subjects = [
+    'moderator feedback',
+    'community suggestions',
+    'stream highlights',
+    'voice chat vibes',
+    'support tickets',
+    'feature requests',
+    'QA reports',
+    'leaderboard cheers',
+    'music queues',
+    'event recaps',
+    'roadmap updates',
+    'patch notes',
+    'beta testers',
+    'new member intros',
+    'analytics alerts',
+    'guild trends',
+  ];
+
+  const contexts = [
+    'coming in live',
+    'rolling through',
+    'dropping by',
+    'from every guild',
+    'echoing back',
+  ];
+
+  const combos: string[] = [];
+  for (const subject of subjects) {
+    for (const context of contexts) {
+      combos.push(`to ${subject} ${context}`);
+    }
+  }
+
+  return combos;
+})();
+
+const DOING_ACTIONS: string[] = (() => {
+  const tasks = [
+    'voice XP trackers',
+    'stream alerts',
+    'role syncs',
+    'backup schedules',
+    'moderation logs',
+    'analytics dashboards',
+    'ticket queues',
+    'embed templates',
+    'giveaway flows',
+    'notification timing',
+    'database queries',
+    'command handlers',
+    'worker health checks',
+    'staging builds',
+    'release notes',
+    'support threads',
+  ];
+
+  const actions = [
+    'maintaining',
+    'tuning',
+    'auditing',
+    'polishing',
+    'upgrading',
+  ];
+
+  const combos: string[] = [];
+  for (const action of actions) {
+    for (const task of tasks) {
+      combos.push(`on ${action} ${task}`);
+    }
+  }
+
+  return combos;
+})();
+
+const STREAMING_SEGMENTS: string[] = (() => {
+  const subjects = [
+    'server metrics',
+    'XP leaderboards',
+    'event highlights',
+    'mod tips & tricks',
+    'community shout-outs',
+    'release notes',
+    'voice XP breakdowns',
+    'Tera Bot tutorials',
+    'live system checks',
+    'status rotations',
+    'automation workshops',
+    'update previews',
+    'roadmap briefings',
+    'announcement rundowns',
+    'support spotlights',
+    'weekly recaps',
+  ];
+
+  const contexts = [
+    'live',
+    'with commentary',
+    'for the crew',
+    'on repeat',
+  ];
+
+  const combos: string[] = [];
+  for (const subject of subjects) {
+    for (const context of contexts) {
+      combos.push(`${subject} ${context}`);
+    }
+  }
+
+  return combos;
+})();
+
+const BOT_STATUS_CATALOG: BotStatus[] = [
+  ...WATCHING_SUBJECTS.map(text => ({ activity: 'Watching', text, type: 3 })),
+  ...PLAYING_ACTIVITIES.map(text => ({ activity: 'Playing', text, type: 0 })),
+  ...THINKING_TOPICS.map(text => ({ activity: 'Thinking', text, type: 2 })),
+  ...LISTENING_TARGETS.map(text => ({ activity: 'Listening', text, type: 2 })),
+  ...DOING_ACTIONS.map(text => ({ activity: 'Doing', text, type: 0 })),
+  ...STREAMING_SEGMENTS.map(text => ({ activity: 'Streaming', text, type: 1 })),
 ];
+
+export const BOT_STATUSES: BotStatus[] = BOT_STATUS_CATALOG.slice(0, 512);
 
 // Shuffle and truncate to exactly 2048 statuses
 export function getShuffledStatuses(): typeof BOT_STATUSES {

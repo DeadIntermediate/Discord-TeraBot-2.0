@@ -35,16 +35,18 @@ export async function guildMemberAddHandler(member: GuildMember) {
         if (existingMember.joinedAt) {
           firstJoinedAt = existingMember.joinedAt;
         }
-      }
-
-      if (existingMember && existingMember.leftAt) {
-        // This member has rejoined
-        isReturningMember = true;
+        
+        // Check if member has left before (leftAt is set and not null)
+        if (existingMember.leftAt !== null && existingMember.leftAt !== undefined) {
+          isReturningMember = true;
+        }
+        
+        // Clear the left date on rejoin
         await storage.updateServerMember(member.guild.id, member.id, {
-          leftAt: null, // Clear the left date
+          leftAt: null,
         });
-      } else if (!existingMember) {
-        // New member
+      } else {
+        // New member - create record
         await storage.createServerMember({
           serverId: member.guild.id,
           userId: member.id,
