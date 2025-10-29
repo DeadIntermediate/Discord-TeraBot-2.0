@@ -3,6 +3,7 @@ import { storage } from '../../storage';
 import { pool } from '../../db';
 import { info, debug, warn, error } from '../../utils/logger';
 import { getRandomStatus, getRandomInterval } from '../../utils/botStatuses.js';
+import { startStreamingTracker } from '../streamingTracker.js';
 
 export async function readyHandler(client: Client) {
   // ASCII Art Banner (debug-only)

@@ -5,6 +5,7 @@ import { guildMemberAddHandler } from './events/guildMemberAdd';
 import { guildMemberRemoveHandler } from './events/guildMemberRemove';
 import { interactionCreateHandler } from './events/interactionCreate';
 import { voiceStateUpdateHandler, startVoiceXpTracker } from './events/voiceStateUpdate';
+import { startStreamingTracker } from './streamingTracker';
 import { handleReactionAdd, handleReactionRemove } from './commands/roleReactions';
 import { commands } from './commands';
 import { StreamMonitor } from './streamMonitor';
@@ -45,6 +46,9 @@ client.once(Events.ClientReady, (c) => {
   
   // Start voice XP tracker
   startVoiceXpTracker(client);
+
+  // Start streaming XP tracker
+  startStreamingTracker(client);
 });
 
 // Shard-specific events

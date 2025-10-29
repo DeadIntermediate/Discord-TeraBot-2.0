@@ -44,9 +44,12 @@ export const serverMembers = pgTable("server_members", {
   textLevel: integer("text_level").default(1),
   voiceXp: integer("voice_xp").default(0),
   voiceLevel: integer("voice_level").default(1),
+  streamXp: integer("stream_xp").default(0),
+  streamLevel: integer("stream_level").default(1),
   globalLevel: integer("global_level").default(1),
   messageCount: integer("message_count").default(0),
   voiceTime: integer("voice_time").default(0), // in minutes
+  streamTime: integer("stream_time").default(0), // in minutes
   joinedAt: timestamp("joined_at").defaultNow(),
   leftAt: timestamp("left_at"),
 }, (table) => ({
