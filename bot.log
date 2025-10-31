@@ -1,4 +1,4 @@
-[dotenv@17.2.3] injecting env (21) from .env -- tip: ⚙️  override existing env vars with { override: true }
+[dotenv@17.2.3] injecting env (21) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
 🚀 Starting TeraBot server...
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -23,7 +23,7 @@ Discord bot successfully logged in
 🚀 Starting Tera Bot initialization...
 
 🔍 Starting stream monitor...
-🎤 Voice XP tracker started
+✅ Voice XP tracker started with 60000ms award interval
 ✅ Streaming tracker initialized
 ✅ PostgreSQL connection verified in bot ready handler
 ✅ Logged in as: Tera Bot#2457
@@ -44,6 +44,4 @@ Discord bot successfully logged in
 ✨ TERA BOT IS READY!
 🚀 All systems operational
 🎮 Watching for commands and events
-⏰ Ready at: 10/31/2025, 12:15:02 PM
-🔄 Shard 0 reconnecting...
-✅ Shard 0 resumed (1 events replayed)
+⏰ Ready at: 10/31/2025, 12:47:15 PM
