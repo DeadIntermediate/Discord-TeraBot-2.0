@@ -1,0 +1,49 @@
+[dotenv@17.2.3] injecting env (21) from .env -- tip: ⚙️  override existing env vars with { override: true }
+🚀 Starting TeraBot server...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔍 ENVIRONMENT VARIABLE VALIDATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ All required environment variables are set correctly
+
+⚠️  Warnings:
+   • PORT is not set (defaulting to 5000)
+
+🔍 Testing database connection...
+✅ PostgreSQL connected successfully
+✅ Database connectivity verified. Proceeding with bot startup...
+
+[express] Starting Discord bot...
+🔍 Testing database connection...
+✅ PostgreSQL connected successfully
+Discord bot successfully logged in
+[express] Discord bot started successfully
+[express] serving on port 5000
+✅ Shard 0 is ready
+🚀 Starting Tera Bot initialization...
+
+🔍 Starting stream monitor...
+🎤 Voice XP tracker started
+✅ Streaming tracker initialized
+✅ PostgreSQL connection verified in bot ready handler
+✅ Logged in as: Tera Bot#2457
+🏰 Total Guilds: 2
+👥 Total Members: 73
+📺 Total Channels: 33
+✅ Successfully registered 28 application commands
+🔄 Synchronizing guild data with database...
+✅ Database sync complete!
+   ├─ New guilds added: 0
+   ├─ Existing guilds updated: 2
+   └─ Errors: 0
+🎨 Role Setup Complete!
+   ├─ Roles created: 0
+   ├─ Roles assigned: 0
+   ├─ Servers skipped: 1
+   └─ Total servers: 2
+✨ TERA BOT IS READY!
+🚀 All systems operational
+🎮 Watching for commands and events
+⏰ Ready at: 10/31/2025, 12:15:02 PM
+🔄 Shard 0 reconnecting...
+✅ Shard 0 resumed (1 events replayed)

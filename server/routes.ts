@@ -214,6 +214,254 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // OAuth routes for stream platform authentication
+  app.get("/auth/twitch/login", (_req, res) => {
+    try {
+      const clientId = process.env.TWITCH_CLIENT_ID;
+      const redirectUri = `${process.env.OAUTH_CALLBACK_BASE_URL || 'http://localhost:3000'}/auth/twitch/callback`;
+      const scope = 'user:read:email';
+      const state = Math.random().toString(36).substring(7); // Simple state generation
+      
+      // Store state in session for verification (in production, use proper session management)
+      const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${state}`;
+      
+      res.redirect(twitchAuthUrl);
+    } catch (err) {
+      error('Error initiating Twitch OAuth:', err);
+      res.status(500).json({ message: 'Failed to initiate Twitch authentication' });
+    }
+  });
+
+  app.get("/auth/twitch/callback", async (req, res) => {
+    try {
+      const code = req.query.code as string;
+      const state = req.query.state as string;
+      
+      if (!code) {
+        return res.status(400).json({ message: 'Missing authorization code' });
+      }
+
+      const clientId = process.env.TWITCH_CLIENT_ID;
+      const clientSecret = process.env.TWITCH_CLIENT_SECRET;
+      const redirectUri = `${process.env.OAUTH_CALLBACK_BASE_URL || 'http://localhost:3000'}/auth/twitch/callback`;
+
+      // Exchange authorization code for access token
+      const tokenResponse = await fetch('https://id.twitch.tv/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code,
+          grant_type: 'authorization_code',
+          redirect_uri: redirectUri,
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        throw new Error('Failed to exchange authorization code for token');
+      }
+
+      const tokenData = await tokenResponse.json();
+      const accessToken = tokenData.access_token;
+
+      // Get user information
+      const userResponse = await fetch('https://api.twitch.tv/helix/users', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Client-ID': clientId || '',
+        } as Record<string, string>,
+      });
+
+      if (!userResponse.ok) {
+        throw new Error('Failed to fetch user information');
+      }
+
+      const userData = await userResponse.json();
+      const twitchUser = userData.data[0];
+
+      // Return success with user info - display confirmation page
+      const successHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Twitch Authentication Successful</title>
+            <style>
+              body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+              .container { background: white; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+              h1 { color: #667eea; margin-bottom: 10px; }
+              p { color: #666; font-size: 16px; margin: 10px 0; }
+              .info { background: #f0f0f0; padding: 15px; border-radius: 5px; text-align: left; margin: 20px 0; }
+              .info p { margin: 5px 0; font-family: monospace; }
+              .warning { color: #d32f2f; font-size: 14px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>✅ Twitch Authentication Successful!</h1>
+              <p>Your Twitch account has been verified.</p>
+              <div class="info">
+                <p><strong>Username:</strong> ${twitchUser.login}</p>
+                <p><strong>Display Name:</strong> ${twitchUser.display_name}</p>
+              </div>
+              <p class="warning">⚠️ Return to your Discord server to confirm your account in the modal that appears.</p>
+              <p>You can close this window.</p>
+            </div>
+          </body>
+        </html>
+      `;
+      res.send(successHtml);
+    } catch (err) {
+      error('Error handling Twitch OAuth callback:', err);
+      const errorHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Authentication Failed</title>
+            <style>
+              body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+              .container { background: white; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+              h1 { color: #d32f2f; margin-bottom: 10px; }
+              p { color: #666; font-size: 16px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>❌ Authentication Failed</h1>
+              <p>Something went wrong. Please try again.</p>
+            </div>
+          </body>
+        </html>
+      `;
+      res.status(500).send(errorHtml);
+    }
+  });
+
+  // YouTube OAuth routes (placeholder for future implementation)
+  app.get("/auth/youtube/login", (_req, res) => {
+    res.json({ message: 'YouTube OAuth not yet configured' });
+  });
+
+  // Kick OAuth routes
+  app.get("/auth/kick/login", (_req, res) => {
+    try {
+      const clientId = process.env.KICK_CLIENT_ID;
+      const redirectUri = `${process.env.OAUTH_CALLBACK_BASE_URL || 'http://localhost:3000'}/auth/kick/callback`;
+      const scope = 'openid profile email';
+      const state = Math.random().toString(36).substring(7);
+      
+      const kickAuthUrl = `https://auth.kick.com/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${state}`;
+      
+      res.redirect(kickAuthUrl);
+    } catch (err) {
+      error('Error initiating Kick OAuth:', err);
+      res.status(500).json({ message: 'Failed to initiate Kick authentication' });
+    }
+  });
+
+  app.get("/auth/kick/callback", async (req, res) => {
+    try {
+      const code = req.query.code as string;
+      const state = req.query.state as string;
+      
+      if (!code) {
+        return res.status(400).json({ message: 'Missing authorization code' });
+      }
+
+      const clientId = process.env.KICK_CLIENT_ID;
+      const clientSecret = process.env.KICK_CLIENT_SECRET;
+      const redirectUri = `${process.env.OAUTH_CALLBACK_BASE_URL || 'http://localhost:3000'}/auth/kick/callback`;
+
+      // Exchange authorization code for access token
+      const tokenResponse = await fetch('https://auth.kick.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code,
+          grant_type: 'authorization_code',
+          redirect_uri: redirectUri,
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        throw new Error('Failed to exchange authorization code for token');
+      }
+
+      const tokenData = await tokenResponse.json();
+      const accessToken = tokenData.access_token;
+
+      // Get user information from Kick
+      const userResponse = await fetch('https://api.kick.com/v1/user', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!userResponse.ok) {
+        throw new Error('Failed to fetch user information');
+      }
+
+      const userData = await userResponse.json();
+
+      // Return success with user info - display confirmation page
+      const successHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Kick Authentication Successful</title>
+            <style>
+              body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+              .container { background: white; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+              h1 { color: #667eea; margin-bottom: 10px; }
+              p { color: #666; font-size: 16px; margin: 10px 0; }
+              .info { background: #f0f0f0; padding: 15px; border-radius: 5px; text-align: left; margin: 20px 0; }
+              .info p { margin: 5px 0; font-family: monospace; }
+              .warning { color: #d32f2f; font-size: 14px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>✅ Kick Authentication Successful!</h1>
+              <p>Your Kick account has been verified.</p>
+              <div class="info">
+                <p><strong>Username:</strong> ${userData.username}</p>
+                <p><strong>Display Name:</strong> ${userData.display_name || userData.username}</p>
+              </div>
+              <p class="warning">⚠️ Return to your Discord server to confirm your account in the modal that appears.</p>
+              <p>You can close this window.</p>
+            </div>
+          </body>
+        </html>
+      `;
+      res.send(successHtml);
+    } catch (err) {
+      error('Error handling Kick OAuth callback:', err);
+      const errorHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Authentication Failed</title>
+            <style>
+              body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+              .container { background: white; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+              h1 { color: #d32f2f; margin-bottom: 10px; }
+              p { color: #666; font-size: 16px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>❌ Authentication Failed</h1>
+              <p>Something went wrong. Please try again.</p>
+            </div>
+          </body>
+        </html>
+      `;
+      res.status(500).send(errorHtml);
+    }
+  });
+
   app.post("/api/bot/restart", async (_req, res) => {
     try {
       const success = await botController.restart();
