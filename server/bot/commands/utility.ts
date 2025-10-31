@@ -370,10 +370,107 @@ const debugToggleCommand = {
   },
 };
 
+const memberInfoCommand = {
+  data: new SlashCommandBuilder()
+    .setName('memberinfo')
+    .setDescription('Display detailed information about a member')
+    .addUserOption(option =>
+      option.setName('user')
+        .setDescription('The user to check')
+        .setRequired(false)),
+  
+  async execute(interaction: ChatInputCommandInteraction) {
+    if (!interaction.guild) {
+      await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    const targetUser = interaction.options.getUser('user') || interaction.user;
+    
+    try {
+      const member = await interaction.guild.members.fetch(targetUser.id);
+      
+      let textLevel = 0;
+      let voiceLevel = 0;
+      let globalLevel = 0;
+      let textXp = 0;
+      let voiceXp = 0;
+      let messageCount = 0;
+      let voiceTime = 0;
+      let firstJoinedAt: Date | undefined = undefined;
+
+      // Try to fetch server member data, but handle schema mismatches gracefully
+      try {
+        const serverMember = await storage.getServerMember(interaction.guild.id, targetUser.id);
+        if (serverMember) {
+          textLevel = serverMember ? Number(serverMember.textLevel ?? 0) : 0;
+          voiceLevel = serverMember ? Number(serverMember.voiceLevel ?? 0) : 0;
+          globalLevel = serverMember ? Number(serverMember.globalLevel ?? 0) : 0;
+          textXp = serverMember ? Number(serverMember.textXp ?? 0) : 0;
+          voiceXp = serverMember ? Number(serverMember.voiceXp ?? 0) : 0;
+          messageCount = serverMember ? Number(serverMember.messageCount ?? 0) : 0;
+          voiceTime = serverMember ? Number(serverMember.voiceTime ?? 0) : 0;
+          if (serverMember.joinedAt) {
+            firstJoinedAt = serverMember.joinedAt;
+          }
+        }
+      } catch (dbError: any) {
+        // Database schema might be incomplete - continue with defaults
+        console.error('Database schema incomplete, using default values:', dbError.message);
+      }
+
+      const accountCreated = Math.floor(member.user.createdTimestamp / 1000);
+      const joinedServer = member.joinedTimestamp ? Math.floor(member.joinedTimestamp / 1000) : Math.floor(Date.now() / 1000);
+      const roles = member.roles.cache
+        .filter(role => role.id !== interaction.guild?.id) // Filter out @everyone
+        .map(role => role.toString())
+        .join(', ') || 'None';
+
+      const voiceHours = Math.floor(voiceTime / 60);
+      const voiceMinutes = voiceTime % 60;
+
+      const firstJoinedValue = firstJoinedAt
+        ? `<t:${Math.floor(firstJoinedAt.getTime() / 1000)}:F>`
+        : 'Not tracked';
+
+      const embed = new EmbedBuilder()
+        .setColor(0x5865f2)
+        .setTitle(`👤 ${member.user.tag}`)
+        .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
+        .addFields(
+          { name: '🆔 User ID', value: `\`${targetUser.id}\``, inline: true },
+          { name: '🤖 Bot', value: member.user.bot ? '✅ Yes' : '❌ No', inline: true },
+          { name: '⏸️ Status', value: member.presence?.status ? member.presence.status.toUpperCase() : 'Offline', inline: true },
+          { name: '📅 Account Created', value: `<t:${accountCreated}:F>\n(<t:${accountCreated}:R>)`, inline: false },
+          { name: '✅ Joined Server', value: `<t:${joinedServer}:F>\n(<t:${joinedServer}:R>)`, inline: false },
+          { name: '🗓️ First Join Recorded', value: firstJoinedValue, inline: false },
+          { name: '🎯 Roles', value: roles.length > 1024 ? roles.substring(0, 1021) + '...' : roles, inline: false },
+          { name: '📊 Levels', value: `Global: **${globalLevel}** | Text: **${textLevel}** | Voice: **${voiceLevel}**`, inline: false },
+          { name: '⭐ Experience Points', value: `Text XP: ${textXp.toLocaleString()} | Voice XP: ${voiceXp.toLocaleString()}`, inline: false },
+          { name: '💬 Messages Sent', value: String(messageCount), inline: true },
+          { name: '🎤 Voice Time', value: `${voiceHours}h ${voiceMinutes}m`, inline: true },
+          { name: '🔔 Boosts', value: member.premiumSince ? `Since <t:${Math.floor(member.premiumSince.getTime() / 1000)}:F>` : 'Not boosting', inline: true }
+        )
+        .setFooter({ text: `Requested by ${interaction.user.tag}` })
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+      console.error('Error fetching member info:', error);
+      if (error instanceof Error && error.message.includes('Unknown User')) {
+        await interaction.reply({ content: 'User not found in this server.', flags: MessageFlags.Ephemeral });
+      } else {
+        await interaction.reply({ content: 'An error occurred while fetching member information.', flags: MessageFlags.Ephemeral });
+      }
+    }
+  },
+};
+
 export const utilityCommands = [
   serverInfoCommand,
   levelCommand,
   leaderboardCommand,
+  memberInfoCommand,
   voiceXpMigrationCommand,
   debugToggleCommand,
 ];

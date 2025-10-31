@@ -15,7 +15,7 @@ import {
 } from 'discord.js';
 import { db } from '../../db';
 import { discordServers, streamNotifications, discordUsers } from '../../../shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 
 export const data = new SlashCommandBuilder()
   .setName('stream')
@@ -489,7 +489,10 @@ export async function handleStreamModal(interaction: any) {
   const customId = interaction.customId;
   if (!customId.startsWith('stream_modal_')) return;
 
-  const [, platform, userId] = customId.split('_');
+  // Extract platform and userId from customId: stream_modal_{platform}_{userId}
+  const parts = customId.replace('stream_modal_', '').split('_');
+  const userId = parts.pop(); // Get last part (userId)
+  const platform = parts.join('_'); // Everything else is platform (in case platform has underscores)
   
   // Verify user
   if (interaction.user.id !== userId) {
@@ -545,16 +548,31 @@ export async function handleStreamModal(interaction: any) {
 
   // Add to database
   try {
-    await db.insert(streamNotifications).values({
-      serverId: interaction.guild.id,
-      userId: interaction.user.id,
-      channelId: server.streamNotificationChannelId,
-      platform: platform,
-      username: username,
-      platformUserId: '',
-      isActive: true,
-      isLive: false,
-    });
+    // Try standard insert first
+    try {
+      await db.insert(streamNotifications).values({
+        serverId: interaction.guild.id,
+        userId: interaction.user.id,
+        channelId: server.streamNotificationChannelId,
+        platform: platform,
+        username: username,
+        displayName: username,
+        platformUserId: username,
+        isActive: true,
+        isLive: false,
+      });
+    } catch (drizzleError: any) {
+      // If standard insert fails, try raw SQL with the actual database column names
+      console.warn('Drizzle insert failed, trying raw SQL fallback:', drizzleError.message);
+      
+      // The database has both streamer_name and username columns
+      await db.execute(sql`
+        INSERT INTO stream_notifications 
+          (id, server_id, user_id, channel_id, platform, streamer_name, username, is_active, is_live, created_at)
+        VALUES 
+          (gen_random_uuid(), ${interaction.guild.id}, ${interaction.user.id}, ${server.streamNotificationChannelId}, ${platform}, ${username}, ${username}, true, false, NOW())
+      `);
+    }
 
     const embed = new EmbedBuilder()
       .setColor(0x2ECC71)
@@ -567,9 +585,15 @@ export async function handleStreamModal(interaction: any) {
 
     await interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    console.error('Error adding stream notification:', error);
+    console.error('Error adding stream notification - Full details:', {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      username,
+      platform,
+      guildId: interaction.guild?.id,
+    });
     await interaction.editReply({
-      content: '❌ An error occurred while adding your account. Please try again.',
+      content: '❌ An error occurred while adding your account. Please try again or contact an administrator.',
     });
   }
 }
