@@ -403,13 +403,13 @@ const memberInfoCommand = {
       try {
         const serverMember = await storage.getServerMember(interaction.guild.id, targetUser.id);
         if (serverMember) {
-          textLevel = serverMember ? Number(serverMember.textLevel ?? 0) : 0;
-          voiceLevel = serverMember ? Number(serverMember.voiceLevel ?? 0) : 0;
-          globalLevel = serverMember ? Number(serverMember.globalLevel ?? 0) : 0;
-          textXp = serverMember ? Number(serverMember.textXp ?? 0) : 0;
-          voiceXp = serverMember ? Number(serverMember.voiceXp ?? 0) : 0;
-          messageCount = serverMember ? Number(serverMember.messageCount ?? 0) : 0;
-          voiceTime = serverMember ? Number(serverMember.voiceTime ?? 0) : 0;
+          textLevel = Number(serverMember.textLevel ?? 0);
+          voiceLevel = Number(serverMember.voiceLevel ?? 0);
+          globalLevel = Number(serverMember.globalLevel ?? 0);
+          textXp = Number(serverMember.textXp ?? 0);
+          voiceXp = Number(serverMember.voiceXp ?? 0);
+          messageCount = Number(serverMember.messageCount ?? 0);
+          voiceTime = Number(serverMember.voiceTime ?? 0);
           if (serverMember.joinedAt) {
             firstJoinedAt = serverMember.joinedAt;
           }
@@ -445,10 +445,11 @@ const memberInfoCommand = {
           { name: '✅ Joined Server', value: `<t:${joinedServer}:F>\n(<t:${joinedServer}:R>)`, inline: false },
           { name: '🗓️ First Join Recorded', value: firstJoinedValue, inline: false },
           { name: '🎯 Roles', value: roles.length > 1024 ? roles.substring(0, 1021) + '...' : roles, inline: false },
-          { name: '📊 Levels', value: `Global: **${globalLevel}** | Text: **${textLevel}** | Voice: **${voiceLevel}**`, inline: false },
-          { name: '⭐ Experience Points', value: `Text XP: ${textXp.toLocaleString()} | Voice XP: ${voiceXp.toLocaleString()}`, inline: false },
+          { name: '📊 Overall Level', value: `**${globalLevel}**`, inline: true },
+          { name: '📝 Text Level', value: `**${textLevel}** (${textXp.toLocaleString()} XP)`, inline: true },
+          { name: '🎤 Voice Level', value: `**${voiceLevel}** (${voiceXp.toLocaleString()} XP)`, inline: true },
           { name: '💬 Messages Sent', value: String(messageCount), inline: true },
-          { name: '🎤 Voice Time', value: `${voiceHours}h ${voiceMinutes}m`, inline: true },
+          { name: '�️ Voice Time', value: `${voiceHours}h ${voiceMinutes}m`, inline: true },
           { name: '🔔 Boosts', value: member.premiumSince ? `Since <t:${Math.floor(member.premiumSince.getTime() / 1000)}:F>` : 'Not boosting', inline: true }
         )
         .setFooter({ text: `Requested by ${interaction.user.tag}` })
