@@ -7,6 +7,7 @@ export async function guildCreateHandler(guild: Guild) {
     info(`✨ Bot joined new server: ${guild.name} (ID: ${guild.id})`);
     info(`   📊 Members: ${guild.memberCount}`);
     info(`   👑 Owner: ${guild.ownerId}`);
+    debug(`🔍 Guild Create Event Details:`);
 
     // Create bot role
     let botRole: Role | null = null;
@@ -59,11 +60,12 @@ export async function guildCreateHandler(guild: Guild) {
     } else {
       // Create new server entry
       info(`   ➕ Creating new server entry...`);
-      await storage.createDiscordServer({
+      const createdServer = await storage.createDiscordServer({
         id: guild.id,
         name: guild.name,
         ownerId: guild.ownerId,
       });
+      debug(`   ✅ Server created in database with ID: ${createdServer.id}`);
     }
 
     // Get the system channel (usually #general or similar)
@@ -74,13 +76,17 @@ export async function guildCreateHandler(guild: Guild) {
         await systemChannel.send({
           content: `👋 **Hello ${guild.name}!** I'm Tera Bot 2.0\n\nThank you for adding me! 🎉\n\nUse **/help** to see all available commands or type **/gamehelp** for game lookup features.\n\n**Quick Features:**\n🎮 Game Lookup - Search for games with detailed info\n🎤 Voice XP - Gain XP by spending time in voice channels\n📊 Leveling System - Track your progression\n🎟️ Moderation Tools - Manage your server\n\nHave fun! 🚀`,
         });
+        debug(`   ✅ Welcome message sent to system channel`);
       } catch (err) {
         error(`❌ Could not send welcome message to ${guild.name}:`, err);
       }
+    } else {
+      debug(`   ℹ️ System channel not available or not sendable`);
     }
 
     info(`✅ Successfully registered server: ${guild.name}`);
   } catch (err) {
     error(`❌ Error handling guild creation for ${guild.name}:`, err);
+    debug(`   Error details: ${JSON.stringify(err, null, 2)}`);
   }
 }
