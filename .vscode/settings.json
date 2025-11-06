@@ -1,0 +1,38 @@
+{
+  "extensions.ignoreRecommendations": true,
+  "extensions.recommendations": [],
+  "extensions.disabled": [
+    "ms-mssql.mssql",
+    "ms-mssql.data-workspace-vscode",
+    "ms-mssql.sql-bindings-vscode",
+    "ms-mssql.sql-database-projects-vscode"
+  ],
+  
+  "files.associations": {
+    "*.sql": "postgres"
+  },
+  
+  "[sql]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": null,
+    "editor.trimAutoWhitespace": true
+  },
+  
+  "[postgres]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": null
+  },
+
+  "mssql.lintingEnabled": false,
+  "mssql.enabled": false,
+  "mssql.intelliSense.enableIntelliSense": false,
+  "mssql.format.alignColumnDefinitionsInColumns": false,
+  "sql.lintingEnabled": false,
+  "sql.dialect": "pgsql",
+  
+  "sqlBindings.enabled": false,
+  "sqlDatabaseProjects.enabled": false,
+  "dataWorkspace.enabled": false,
+  
+  "editor.defaultFormatter": null
+}
