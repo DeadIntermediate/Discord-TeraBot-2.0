@@ -1,4 +1,4 @@
-import { VoiceState } from 'discord.js';
+import { VoiceState, Client } from 'discord.js';
 import { storage } from '../../storage';
 import { info, debug, error } from '../../utils/logger';
 
@@ -15,6 +15,9 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
   const guildId = newState.guild.id;
   const sessionKey = `${guildId}-${userId}`;
 
+  // Debug log for all voice state changes
+  info(`🔍 [DEBUG] Voice State Change Detected: User=${userId} | Old Channel=${oldState.channelId || 'null'} | New Channel=${newState.channelId || 'null'}`);
+
   // User joined a voice channel
   if (!oldState.channelId && newState.channelId) {
     // Don't count AFK channel or if user is muted/deafened
@@ -22,28 +25,28 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
       return;
     }
     
-  // Start tracking session
-  voiceSessionStart.set(sessionKey, Date.now());
-  
-  // Fetch member for proper logging
-  let userTag = 'Unknown User';
-  let channelName = 'Unknown Channel';
-  try {
-    if (!newState.member) {
-      const member = await newState.guild.members.fetch(userId);
-      userTag = member.user.tag;
-    } else {
-      userTag = newState.member.user.tag;
+    // Start tracking session
+    voiceSessionStart.set(sessionKey, Date.now());
+    
+    // Fetch member for proper logging
+    let userTag = 'Unknown User';
+    let channelName = 'Unknown Channel';
+    try {
+      if (!newState.member) {
+        const member = await newState.guild.members.fetch(userId);
+        userTag = member.user.tag;
+      } else {
+        userTag = newState.member.user.tag;
+      }
+    } catch (err) {
+      debug(`Could not fetch member ${userId} for logging`);
     }
-  } catch (err) {
-    debug(`Could not fetch member ${userId} for logging`);
-  }
-  
-  if (newState.channel) {
-    channelName = newState.channel.name;
-  }
-  
-  info(`🎤 [VOICE_JOIN] ${userTag} joined #${channelName} in ${newState.guild.name}`);
+    
+    if (newState.channel) {
+      channelName = newState.channel.name;
+    }
+    
+    info(`🎤 [VOICE_JOIN] ${userTag} joined #${channelName} in ${newState.guild.name}`);
   }
   
   // User left a voice channel or switched channels
