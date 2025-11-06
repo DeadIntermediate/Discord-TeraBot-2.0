@@ -122,10 +122,10 @@ const levelCommand = {
         const voiceXp = Number(member.voiceXp ?? 0);
         // Each level requires (level * 100) XP to reach the NEXT level
         // So to reach level X, you need: 100 + 200 + 300 + ... + (X-1)*100
-        const xpNeededForCurrentLevel = voiceLevel * 100;
-        const xpNeededForNextLevel = (voiceLevel + 1) * 100;
-        const voiceProgressXP = Math.max(0, voiceXp % xpNeededForNextLevel);
-        const voiceTotalXP = Math.max(1, xpNeededForNextLevel);
+        const voiceXpForCurrentLevel = (voiceLevel * (voiceLevel + 1) * 50); // Total XP to reach current level
+        const voiceXpForNextLevel = ((voiceLevel + 1) * (voiceLevel + 2) * 50); // Total XP to reach next level
+        const voiceProgressXP = Math.max(0, voiceXp - voiceXpForCurrentLevel);
+        const voiceTotalXP = Math.max(1, voiceXpForNextLevel - voiceXpForCurrentLevel);
         const voiceFilledLength = Math.max(0, Math.min(barLength, Math.floor((voiceProgressXP / voiceTotalXP) * barLength)));
         const voiceProgressBar = '🟩'.repeat(voiceFilledLength) + '🟥'.repeat(barLength - voiceFilledLength);
         const voiceProgressPercent = Math.floor((voiceProgressXP / voiceTotalXP) * 100);
