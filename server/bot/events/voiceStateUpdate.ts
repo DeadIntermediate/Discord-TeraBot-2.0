@@ -27,6 +27,7 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
   
   // Fetch member for proper logging
   let userTag = 'Unknown User';
+  let channelName = 'Unknown Channel';
   try {
     if (!newState.member) {
       const member = await newState.guild.members.fetch(userId);
@@ -38,7 +39,11 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
     debug(`Could not fetch member ${userId} for logging`);
   }
   
-  info(`🎤 ${userTag} joined voice in ${newState.guild.name}`);
+  if (newState.channel) {
+    channelName = newState.channel.name;
+  }
+  
+  info(`🎤 [VOICE_JOIN] ${userTag} joined #${channelName} in ${newState.guild.name}`);
   }
   
   // User left a voice channel or switched channels
@@ -50,6 +55,7 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
       
       // Fetch member for logging
       let userTag = 'Unknown User';
+      let channelName = 'Unknown Channel';
       try {
         if (!newState.member) {
           const member = await newState.guild.members.fetch(userId);
@@ -59,6 +65,10 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
         }
       } catch (err) {
         debug(`Could not fetch member ${userId} for logging`);
+      }
+      
+      if (oldState.channel) {
+        channelName = oldState.channel.name;
       }
       
       // Only award XP if they were in voice for at least 1 minute
@@ -116,7 +126,7 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
             
             // Check if they leveled up
             if (newVoiceLevel > (member.voiceLevel || 1)) {
-              info(`🎉 ${userTag} reached Voice Level ${newVoiceLevel} in ${newState.guild.name}!`);
+              info(`🎉 [VOICE_LEVELUP] ${userTag} reached Voice Level ${newVoiceLevel} in ${newState.guild.name}!`);
               
               // Send level up notification in a system channel if available
               const systemChannel = newState.guild.systemChannel;
@@ -131,7 +141,7 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
               }
             }
             
-            info(`✅ Awarded ${xpGained} voice XP to ${userTag} (${timeInVoice} minutes in voice)`);
+            info(`💬 [VOICE_XP_GAIN] ${userTag} earned +${xpGained} voice XP | Time: ${timeInVoice}m | Total Voice XP: ${newVoiceXp} | Level: ${newVoiceLevel}`);
           }
         } catch (err) {
           const { error: logError } = await import('../../utils/logger');
@@ -141,7 +151,7 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
       
       // Remove session tracking
       voiceSessionStart.delete(sessionKey);
-      info(`🎤 ${userTag} left voice in ${newState.guild.name} (${timeInVoice} min)`);
+      info(`🚪 [VOICE_LEAVE] ${userTag} left #${channelName} in ${newState.guild.name} | Duration: ${timeInVoice}m`);
     }
   }
   
