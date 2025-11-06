@@ -1,0 +1,38 @@
+[Unit]
+Description=Tera Bot Discord Bot with Auto-Restart
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=deadintermediate
+WorkingDirectory=/home/deadintermediate/Desktop/Terabot/Discord-TeraBot-2.0
+Environment="NODE_ENV=production"
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Run the auto-restart script
+ExecStart=/home/deadintermediate/Desktop/Terabot/Discord-TeraBot-2.0/auto-restart-bot.sh
+
+# Restart on failure (systemd level, before our 3-failure limit)
+Restart=always
+RestartSec=5
+
+# Stop on manual intervention
+KillMode=process
+KillSignal=SIGTERM
+
+# Logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tera-bot
+
+# Resource limits
+MemoryMax=2G
+CPUQuota=80%
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
