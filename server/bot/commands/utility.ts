@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { storage } from '../../storage';
+import { error as logError, debug } from '../../utils/logger';
 
 const serverInfoCommand = {
   data: new SlashCommandBuilder()
@@ -45,7 +46,7 @@ const serverInfoCommand = {
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
-      console.error('Error fetching server info:', error);
+      logError('Error fetching server info:', error);
       await interaction.reply({ content: 'An error occurred while fetching server information.', flags: MessageFlags.Ephemeral });
     }
   },
@@ -85,7 +86,7 @@ const levelCommand = {
         
         // Validate that xp is not NaN
         if (isNaN(xp) || isNaN(level)) {
-          console.error(`Invalid XP/Level for ${targetUser.id}: xp=${member.xp}, level=${member.level}`);
+          logError(`Invalid XP/Level for ${targetUser.id}: xp=${member.xp}, level=${member.level}`);
           await interaction.reply({ 
             content: 'Error: Invalid XP data in database. Please contact an admin.', 
             flags: MessageFlags.Ephemeral 
@@ -155,14 +156,14 @@ const levelCommand = {
 
         await interaction.reply({ embeds: [embed] });
       } catch (calcError) {
-        console.error('Error in level calculations:', calcError, 'Member data:', member);
+        logError('Error in level calculations:', calcError, 'Member data:', member);
         await interaction.reply({ 
           content: 'Error calculating levels. Please contact an admin.', 
           flags: MessageFlags.Ephemeral 
         });
       }
     } catch (error) {
-      console.error('Error fetching level info:', error);
+      logError('Error fetching level info:', error);
       await interaction.reply({ content: 'An error occurred while fetching level information.', flags: MessageFlags.Ephemeral });
     }
   },
@@ -209,7 +210,7 @@ const leaderboardCommand = {
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
-      console.error('Error fetching leaderboard:', error);
+      logError('Error fetching leaderboard:', error);
       await interaction.reply({ content: 'An error occurred while fetching the leaderboard.', flags: MessageFlags.Ephemeral });
     }
   },
@@ -295,7 +296,7 @@ const voiceXpMigrationCommand = {
 
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
-      console.error('Error during voice XP migration:', error);
+      logError('Error during voice XP migration:', error);
       await interaction.editReply('❌ An error occurred during migration. Please check the server logs.');
     }
   },
@@ -366,7 +367,7 @@ const debugToggleCommand = {
       
       await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     } catch (error) {
-      console.error('Error toggling debug mode:', error);
+      logError('Error toggling debug mode:', error);
       await interaction.reply({ 
         content: '❌ An error occurred while toggling debug mode.', 
         flags: MessageFlags.Ephemeral 
@@ -421,7 +422,7 @@ const memberInfoCommand = {
         }
       } catch (dbError: any) {
         // Database schema might be incomplete - continue with defaults
-        console.error('Database schema incomplete, using default values:', dbError.message);
+        logError('Database schema incomplete, using default values:', dbError.message);
       }
 
       const accountCreated = Math.floor(member.user.createdTimestamp / 1000);
@@ -462,7 +463,7 @@ const memberInfoCommand = {
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
-      console.error('Error fetching member info:', error);
+      logError('Error fetching member info:', error);
       if (error instanceof Error && error.message.includes('Unknown User')) {
         await interaction.reply({ content: 'User not found in this server.', flags: MessageFlags.Ephemeral });
       } else {

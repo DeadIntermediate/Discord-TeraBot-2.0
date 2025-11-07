@@ -12,6 +12,7 @@ import {
   MessageFlags
 } from 'discord.js';
 import { gameAPI, GameData, GameScreenshot } from '../../utils/gameAPI';
+import { debug, error as logError, info } from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('game')
@@ -102,7 +103,7 @@ async function handleSearch(interaction: ChatInputCommandInteraction) {
   const query = interaction.options.getString('query', true);
 
   try {
-    console.log(`🔍 Searching for games with query: "${query}"`);
+    debug(`🔍 Searching for games with query: "${query}"`);
     const searchResults = await gameAPI.searchGames(query, 1, 10);
 
     if (searchResults.count === 0) {
@@ -111,7 +112,7 @@ async function handleSearch(interaction: ChatInputCommandInteraction) {
       });
     }
 
-    console.log(`Found ${searchResults.count} games. Showing top 5 in dropdown.`);
+    debug(`Found ${searchResults.count} games. Showing top 5 in dropdown.`);
 
     if (searchResults.results.length === 1) {
       // If only one result, show detailed info directly
@@ -163,11 +164,11 @@ async function handleSearch(interaction: ChatInputCommandInteraction) {
           
           // If no platforms from RAWG, try Steam API as fallback
           if (platformsList.length === 0) {
-            console.log(`📊 No platforms from RAWG for "${game.name}", trying Steam API...`);
+            debug(`📊 No platforms from RAWG for "${game.name}", trying Steam API...`);
             const steamPlatforms = await gameAPI.getGamePlatformsFromSteam(game.name);
             if (steamPlatforms) {
               platformsList = steamPlatforms;
-              console.log(`✅ Found ${steamPlatforms.length} platforms from Steam API`);
+              debug(`✅ Found ${steamPlatforms.length} platforms from Steam API`);
             }
           }
           
@@ -181,7 +182,7 @@ async function handleSearch(interaction: ChatInputCommandInteraction) {
             inline: false
           };
         } catch (err) {
-          console.error(`Error fetching details for game ${game.id}:`, err);
+          logError(`Error fetching details for game ${game.id}:`, err);
           return {
             name: `${index + 1}. ${game.name}`,
             value: `**📅 Released:** ${game.released || 'Unknown'}\n**⭐ Rating:** ${gameAPI.formatRating(game.rating, game.rating_top)}\n**🎮 Platforms:** Unable to load`,
@@ -228,7 +229,7 @@ async function handleSearch(interaction: ChatInputCommandInteraction) {
       });
     }
   } catch (error) {
-    console.error('Error in game search:', error);
+    logError('Error in game search:', error);
     const errorMsg = error instanceof Error ? error.message : String(error);
     
     if (errorMsg.includes('RAWG_API_KEY')) {
@@ -262,7 +263,7 @@ async function handleInfo(interaction: ChatInputCommandInteraction) {
     const game = searchResults.results[0];
     await showGameDetails(interaction, game);
   } catch (error) {
-    console.error('Error getting game info:', error);
+    logError('Error getting game info:', error);
     const errorMsg = error instanceof Error ? error.message : String(error);
     
     if (errorMsg.includes('RAWG_API_KEY')) {
@@ -297,7 +298,7 @@ async function handleRandom(interaction: ChatInputCommandInteraction) {
       await showGameList(interaction, randomGames, '🎲 Random Games');
     }
   } catch (error) {
-    console.error('Error getting random games:', error);
+    logError('Error getting random games:', error);
     const errorMsg = error instanceof Error ? error.message : String(error);
     
     if (errorMsg.includes('RAWG_API_KEY')) {
@@ -328,7 +329,7 @@ async function handleTrending(interaction: ChatInputCommandInteraction) {
 
     await showGameList(interaction, trendingGames, '🔥 Trending Games');
   } catch (error) {
-    console.error('Error getting trending games:', error);
+    logError('Error getting trending games:', error);
     const errorMsg = error instanceof Error ? error.message : String(error);
     
     if (errorMsg.includes('RAWG_API_KEY')) {
@@ -519,7 +520,7 @@ async function showGameDetails(interaction: ChatInputCommandInteraction, game: G
       });
     }
   } catch (error) {
-    console.error('Error showing game details:', error);
+    logError('Error showing game details:', error);
     const errorMessage = '❌ An error occurred while displaying game details.';
     
     if (isUpdate) {

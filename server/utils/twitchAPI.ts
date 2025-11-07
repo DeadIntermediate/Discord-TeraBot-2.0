@@ -3,6 +3,8 @@
 // Note: Node 18+ provides global `fetch`. If running on older Node versions,
 // ensure a global fetch polyfill is available.
 
+import { warn, error } from './logger';
+
 interface TwitchOAuthResponse {
   access_token: string;
   expires_in: number;
@@ -39,7 +41,7 @@ export class TwitchAPI {
     this.clientSecret = process.env.TWITCH_CLIENT_SECRET || '';
     
     if (!this.clientId || !this.clientSecret) {
-      console.warn('⚠️ Twitch API credentials not configured');
+      warn('⚠️ Twitch API credentials not configured');
     }
   }
 
@@ -71,9 +73,9 @@ export class TwitchAPI {
       this.tokenExpiresAt = Date.now() + (data.expires_in * 1000) - 60000; // 1 min buffer
 
       return this.accessToken;
-    } catch (error) {
-      console.error('Failed to get Twitch access token:', error);
-      throw error;
+    } catch (err) {
+      error('Failed to get Twitch access token:', err);
+      throw err;
     }
   }
 
@@ -116,8 +118,8 @@ export class TwitchAPI {
         viewers: stream.viewer_count,
         thumbnailUrl: stream.thumbnail_url.replace('{width}', '1920').replace('{height}', '1080')
       };
-    } catch (error) {
-      console.error(`Error checking Twitch stream for ${username}:`, error);
+    } catch (err) {
+      error(`Error checking Twitch stream for ${username}:`, err);
       return { isLive: false };
     }
   }

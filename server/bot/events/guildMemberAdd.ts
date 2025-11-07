@@ -1,6 +1,9 @@
-import { GuildMember, EmbedBuilder, TextChannel } from 'discord.js';
+import { GuildMember } from 'discord.js';
+import { TextChannel } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { storage } from '../../storage';
 import { info, error } from '../../utils/logger';
+import { getOrCreateServerMember } from '../../utils/memberFactory';
 
 export async function guildMemberAddHandler(member: GuildMember) {
   try {
@@ -46,21 +49,14 @@ export async function guildMemberAddHandler(member: GuildMember) {
           leftAt: null,
         });
       } else {
-        // New member - create record
-        await storage.createServerMember({
-          serverId: member.guild.id,
-          userId: member.id,
-        });
+        // New member - create record using factory
+        await getOrCreateServerMember(member.guild.id, member.id);
       }
     } catch (dbError: any) {
       error('Failed to sync server member record:', dbError);
-      // If database error occurs, try to create a basic member record
-      // This handles cases where schema columns may not exist yet
+      // If database error occurs, try to create a basic member record using factory
       try {
-        await storage.createServerMember({
-          serverId: member.guild.id,
-          userId: member.id,
-        });
+        await getOrCreateServerMember(member.guild.id, member.id);
       } catch (createError) {
         error('Failed to create server member record:', createError);
       }

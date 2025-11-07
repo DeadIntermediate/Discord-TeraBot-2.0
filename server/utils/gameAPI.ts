@@ -8,6 +8,8 @@
  * - Steam API (Free, for additional data)
  */
 
+import { error, info, debug } from './logger';
+
 export interface GameData {
   id: string;
   name: string;
@@ -99,8 +101,8 @@ class GameAPIService {
     // Require RAWG API key for live lookups. No mock fallback in this bot.
     this.missingApiKey = !this.RAWG_API_KEY;
     if (this.missingApiKey) {
-      console.error('❌ RAWG API key is missing. This bot requires RAWG_API_KEY in the environment for live game lookups.');
-      console.error('💡 Get a free API key at: https://rawg.io/apidocs');
+      error('❌ RAWG API key is missing. This bot requires RAWG_API_KEY in the environment for live game lookups.');
+      error('💡 Get a free API key at: https://rawg.io/apidocs');
     }
   }
 
@@ -145,9 +147,9 @@ class GameAPIService {
       const data = await response.json();
       this.setCachedData(cacheKey, data);
       return data;
-    } catch (error) {
-      console.error('Error searching games:', error);
-      throw error;
+    } catch (err) {
+      error('Error searching games:', err);
+      throw err;
     }
   }
 
@@ -178,14 +180,14 @@ class GameAPIService {
       }
 
       const data = await response.json();
-      console.log(`📊 Game ${gameId}: Found ${data.platforms?.length || 0} platforms`);
+      debug(`📊 Game ${gameId}: Found ${data.platforms?.length || 0} platforms`);
       if (data.platforms && data.platforms.length > 0) {
-        console.log(`   Platforms: ${data.platforms.map((p: any) => p.platform?.name || p.name).join(', ')}`);
+        debug(`   Platforms: ${data.platforms.map((p: any) => p.platform?.name || p.name).join(', ')}`);
       }
       this.setCachedData(cacheKey, data);
       return data;
-    } catch (error) {
-      console.error(`Error getting game details for ID ${gameId}:`, error);
+    } catch (err) {
+      error(`Error getting game details for ID ${gameId}:`, err);
       return null;
     }
   }
@@ -217,8 +219,8 @@ class GameAPIService {
       const screenshots = data.results || [];
       this.setCachedData(cacheKey, screenshots);
       return screenshots;
-    } catch (error) {
-      console.error(`Error getting screenshots for game ID ${gameId}:`, error);
+    } catch (err) {
+      error(`Error getting screenshots for game ID ${gameId}:`, err);
       return [];
     }
   }
@@ -256,8 +258,8 @@ class GameAPIService {
       const games = data.results || [];
       this.setCachedData(cacheKey, games);
       return games;
-    } catch (error) {
-      console.error('Error getting random games:', error);
+    } catch (err) {
+      error('Error getting random games:', err);
       return [];
     }
   }

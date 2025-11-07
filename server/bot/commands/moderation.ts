@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder, MessageFlags } from 'discord.js';
 import { storage } from '../../storage';
+import { error as logError } from '../../utils/logger';
 
 const kickCommand = {
   data: new SlashCommandBuilder()
@@ -56,7 +57,7 @@ const kickCommand = {
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
-      console.error('Error kicking user:', error);
+      logError('Error kicking user:', error);
       await interaction.reply({ content: 'An error occurred while kicking the user.', flags: MessageFlags.Ephemeral });
     }
   },
@@ -120,7 +121,7 @@ const banCommand = {
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
-      console.error('Error banning user:', error);
+      logError('Error banning user:', error);
       await interaction.reply({ content: 'An error occurred while banning the user.', flags: MessageFlags.Ephemeral });
     }
   },
@@ -192,7 +193,7 @@ const muteCommand = {
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
-      console.error('Error timing out user:', error);
+      logError('Error timing out user:', error);
       await interaction.reply({ content: 'An error occurred while timing out the user.', flags: MessageFlags.Ephemeral });
     }
   },
@@ -238,7 +239,7 @@ const clearCommand = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (error) {
-      console.error('Error clearing messages:', error);
+      logError('Error clearing messages:', error);
       await interaction.reply({ 
         content: 'An error occurred while clearing messages.', 
         flags: MessageFlags.Ephemeral 
@@ -365,13 +366,13 @@ const jailCommand = {
               channelId: interaction.channel?.id,
             });
           } catch (error) {
-            console.error('Error auto-unjailing user:', error);
+            logError('Error auto-unjailing user:', error);
           }
         }, duration * 60000);
       }
 
     } catch (error) {
-      console.error('Error jailing user:', error);
+      logError('Error jailing user:', error);
       await interaction.reply({ content: 'An error occurred while jailing the user.', flags: MessageFlags.Ephemeral });
     }
   },
@@ -458,7 +459,7 @@ const unjailCommand = {
       await interaction.reply({ embeds: [embed] });
 
     } catch (error) {
-      console.error('Error unjailing user:', error);
+      logError('Error unjailing user:', error);
       await interaction.reply({ content: 'An error occurred while unjailing the user.', flags: MessageFlags.Ephemeral });
     }
   },
@@ -528,7 +529,7 @@ const warnCommand = {
       }
 
     } catch (error) {
-      console.error('Error warning user:', error);
+      logError('Error warning user:', error);
       await interaction.reply({ content: 'An error occurred while warning the user.', flags: MessageFlags.Ephemeral });
     }
   },
@@ -588,7 +589,7 @@ const modHistoryCommand = {
       await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
     } catch (error) {
-      console.error('Error fetching moderation history:', error);
+      logError('Error fetching moderation history:', error);
       await interaction.reply({ 
         content: 'An error occurred while fetching moderation history.', 
         flags: MessageFlags.Ephemeral 

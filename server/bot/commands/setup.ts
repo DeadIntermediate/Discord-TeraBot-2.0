@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, PermissionFlagsBits, MessageFlags, ChannelType } from 'discord.js';
 import { storage } from '../../storage.js';
+import { error as logError } from '../../utils/logger';
 
 const setupCommand = {
   data: new SlashCommandBuilder()
@@ -199,7 +200,7 @@ const setupCommand = {
 
         await interaction.editReply({ embeds: [embed] });
       } catch (error) {
-        console.error('Error checking permissions:', error);
+        logError('Error checking permissions:', error);
         await interaction.editReply({ 
           content: '❌ An error occurred while checking permissions.' 
         });
@@ -264,7 +265,7 @@ const setupCommand = {
 
         await interaction.editReply({ embeds: [embed] });
       } catch (error) {
-        console.error('Error configuring welcome messages:', error);
+        logError('Error configuring welcome messages:', error);
         await interaction.editReply({ 
           content: '❌ An error occurred while setting up welcome announcements.' 
         });
@@ -376,12 +377,12 @@ const setupCommand = {
             username: '📋 Tera Bot Logs',
           });
         } catch (err) {
-          console.error('Failed to send test message:', err);
+          logError('Failed to send test message:', err);
         }
 
         await interaction.editReply({ embeds: [embed] });
       } catch (error) {
-        console.error('Error configuring logging:', error);
+        logError('Error configuring logging:', error);
         await interaction.editReply({ 
           content: '❌ An error occurred while setting up logging. Make sure I have permission to manage webhooks in that channel.' 
         });
@@ -477,7 +478,7 @@ const setupCommand = {
 
         await interaction.editReply({ embeds: [embed] });
       } catch (error) {
-        console.error('Error creating bot role:', error);
+        logError('Error creating bot role:', error);
         await interaction.editReply({ 
           content: '❌ An error occurred while creating the role. Make sure the bot has the "Manage Roles" permission.' 
         });
@@ -538,7 +539,7 @@ const setupCommand = {
 
         await interaction.editReply({ embeds: [embed] });
       } catch (error) {
-        console.error('Error creating backup:', error);
+        logError('Error creating backup:', error);
         await interaction.editReply({ 
           content: '❌ An error occurred while creating the backup.' 
         });
@@ -602,7 +603,7 @@ const setupCommand = {
 
         await interaction.editReply({ embeds: [embed] });
       } catch (error) {
-        console.error('Error listing backups:', error);
+        logError('Error listing backups:', error);
         await interaction.editReply({ 
           content: '❌ An error occurred while retrieving backups.' 
         });
@@ -661,7 +662,7 @@ const setupCommand = {
 
         await interaction.editReply({ embeds: [embed] });
       } catch (error) {
-        console.error('Error restoring backup:', error);
+        logError('Error restoring backup:', error);
         await interaction.editReply({ 
           content: '❌ An error occurred while restoring the backup.' 
         });
@@ -710,7 +711,7 @@ const setupCommand = {
 
         await interaction.editReply({ embeds: [embed] });
       } catch (error) {
-        console.error('Error deleting backup:', error);
+        logError('Error deleting backup:', error);
         await interaction.editReply({ 
           content: '❌ An error occurred while deleting the backup.' 
         });

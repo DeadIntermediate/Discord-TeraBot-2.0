@@ -1,4 +1,6 @@
 // Missing YouTube API implementation
+import { warn, error } from './logger';
+
 export class YouTubeAPI {
   private apiKey: string;
 
@@ -6,7 +8,7 @@ export class YouTubeAPI {
     this.apiKey = process.env.YOUTUBE_API_KEY || '';
     
     if (!this.apiKey) {
-      console.warn('⚠️ YouTube API key not configured');
+      warn('⚠️ YouTube API key not configured');
     }
   }
 
@@ -59,8 +61,8 @@ export class YouTubeAPI {
           parseInt(video.liveStreamingDetails.concurrentViewers) : undefined,
         thumbnailUrl: liveVideo.snippet.thumbnails?.high?.url
       };
-    } catch (error) {
-      console.error(`Error checking YouTube stream for channel ${channelId}:`, error);
+    } catch (err) {
+      error(`Error checking YouTube stream for channel ${channelId}:`, err);
       return { isLive: false };
     }
   }
@@ -83,8 +85,8 @@ export class YouTubeAPI {
 
       const data = await response.json();
       return data.items[0]?.id || null;
-    } catch (error) {
-      console.error(`Error getting YouTube channel ID for ${username}:`, error);
+    } catch (err) {
+      error(`Error getting YouTube channel ID for ${username}:`, err);
       return null;
     }
   }

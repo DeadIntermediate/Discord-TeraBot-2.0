@@ -1,6 +1,7 @@
 import { Client, ActivityType } from 'discord.js';
 import { storage } from '../storage';
 import { info, debug, error } from '../utils/logger';
+import { getOrCreateServerMember, updateMemberXP } from '../utils/memberFactory';
 
 // Track users currently streaming
 const streamingSessions = new Map<string, number>();
@@ -69,55 +70,16 @@ async function awardStreamingXp(
       return;
     }
 
-    // Get or create server member
-    let member = await storage.getServerMember(guildId, userId);
-
-    if (!member) {
-      // Create member if doesn't exist
-      await storage.createServerMember({
-        serverId: guildId,
-        userId: userId,
-        xp: 0,
-        level: 1,
-        textXp: 0,
-        textLevel: 1,
-        voiceXp: 0,
-        voiceLevel: 1,
-        streamXp: 0,
-        streamLevel: 1,
-        globalLevel: 1,
-        voiceTime: 0,
-        streamTime: timeStreaming,
-        messageCount: 0,
-      });
-
-      member = await storage.getServerMember(guildId, userId);
-    }
+    // Get or create server member using factory
+    const member = await getOrCreateServerMember(guildId, userId);
 
     if (member) {
-      // Calculate XP gained
-      const xpGained = timeStreaming * STREAM_XP_PER_MINUTE;
-      const newStreamXp = (member.streamXp || 0) + xpGained;
-      const newStreamTime = (member.streamTime || 0) + timeStreaming;
-
-      // Calculate new level
-      let newStreamLevel = member.streamLevel || 1;
-      let remainingXp = newStreamXp;
-
-      while (remainingXp >= XP_PER_LEVEL * newStreamLevel) {
-        remainingXp -= XP_PER_LEVEL * newStreamLevel;
-        newStreamLevel++;
-      }
-
-      // Update member
-      await storage.updateServerMember(guildId, userId, {
-        streamXp: newStreamXp,
-        streamLevel: newStreamLevel,
-        streamTime: newStreamTime,
-      });
+      // Award streaming XP (counts as voice XP)
+      const xpGain = timeStreaming * STREAM_XP_PER_MINUTE;
+      await updateMemberXP(guildId, userId, xpGain, 'stream', member);
 
       info(
-        `🎬 ${userId} earned ${xpGained} streaming XP (Level ${newStreamLevel}) after ${timeStreaming}min stream in ${guildId}`
+        `🎬 ${userId} earned ${xpGain} streaming XP after ${timeStreaming}min stream in ${guildId}`
       );
     }
 

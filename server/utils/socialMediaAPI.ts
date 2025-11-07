@@ -3,6 +3,8 @@
  * Supports BlueSky, Instagram, and X (Twitter)
  */
 
+import { info, warn, error, debug } from './logger';
+
 interface SocialPost {
   id: string;
   author: string;
@@ -58,7 +60,7 @@ class SocialMediaAPI {
       );
 
       if (!response.ok) {
-        console.error(`❌ BlueSky API error: ${response.status}`);
+        error(`❌ BlueSky API error: ${response.status}`);
         return [];
       }
 
@@ -86,10 +88,10 @@ class SocialMediaAPI {
         }
       }
 
-      console.log(`✅ Retrieved ${posts.length} BlueSky posts from @${cleanHandle}`);
+      info(`✅ Retrieved ${posts.length} BlueSky posts from @${cleanHandle}`);
       return posts;
-    } catch (error) {
-      console.error('❌ Error fetching BlueSky posts:', error);
+    } catch (err) {
+      error('❌ Error fetching BlueSky posts:', err);
       return [];
     }
   }
@@ -101,7 +103,7 @@ class SocialMediaAPI {
     try {
       const bearerToken = process.env.X_API_KEY;
       if (!bearerToken) {
-        console.warn('⚠️  X_API_KEY not set in environment');
+        warn('⚠️  X_API_KEY not set in environment');
         return [];
       }
 
@@ -119,7 +121,7 @@ class SocialMediaAPI {
       );
 
       if (!userResponse.ok) {
-        console.error(`❌ X API error (user lookup): ${userResponse.status}`);
+        error(`❌ X API error (user lookup): ${userResponse.status}`);
         return [];
       }
 
@@ -127,7 +129,7 @@ class SocialMediaAPI {
       const userId = userData.data?.id;
 
       if (!userId) {
-        console.error(`❌ Could not find X user: ${cleanUsername}`);
+        error(`❌ Could not find X user: ${cleanUsername}`);
         return [];
       }
 
@@ -143,7 +145,7 @@ class SocialMediaAPI {
       );
 
       if (!tweetsResponse.ok) {
-        console.error(`❌ X API error (tweets): ${tweetsResponse.status}`);
+        error(`❌ X API error (tweets): ${tweetsResponse.status}`);
         return [];
       }
 
@@ -169,10 +171,10 @@ class SocialMediaAPI {
         }
       }
 
-      console.log(`✅ Retrieved ${posts.length} X posts from @${cleanUsername}`);
+      info(`✅ Retrieved ${posts.length} X posts from @${cleanUsername}`);
       return posts;
-    } catch (error) {
-      console.error('❌ Error fetching X posts:', error);
+    } catch (err) {
+      error('❌ Error fetching X posts:', err);
       return [];
     }
   }
@@ -185,13 +187,13 @@ class SocialMediaAPI {
     try {
       const igToken = process.env.INSTAGRAM_API_TOKEN;
       if (!igToken) {
-        console.warn('⚠️  INSTAGRAM_API_TOKEN not set in environment');
+        warn('⚠️  INSTAGRAM_API_TOKEN not set in environment');
         return [];
       }
 
       // This endpoint requires a business account and proper setup
       // For now, we'll return a placeholder that explains the setup
-      console.warn('⚠️  Instagram API requires business account and manual setup');
+      warn('⚠️  Instagram API requires business account and manual setup');
       
       // In a production environment, you would:
       // 1. Get the Instagram Business Account ID via Graph API
@@ -199,8 +201,8 @@ class SocialMediaAPI {
       // 3. Parse media data and return posts
 
       return [];
-    } catch (error) {
-      console.error('❌ Error fetching Instagram posts:', error);
+    } catch (err) {
+      error('❌ Error fetching Instagram posts:', err);
       return [];
     }
   }
