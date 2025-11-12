@@ -5,10 +5,25 @@ import { botController } from "./botControl";
 import { testDatabaseConnection, closeDatabaseConnection } from "./db";
 import { validateEnvironment, displayValidationResults } from "./utils/envValidator";
 import { info, warn, error, debug } from './utils/logger';
+import { securityHeaders, corsMiddleware, sanitizeRequest } from './middleware/security';
+import { apiRateLimit } from './middleware/rateLimit';
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// Trust proxy - important for rate limiting and getting correct IP addresses
+app.set('trust proxy', 1);
+
+// Request size limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// Security middleware
+app.use(securityHeaders);
+app.use(corsMiddleware);
+app.use(sanitizeRequest);
+
+// Apply rate limiting to API routes
+app.use('/api/', apiRateLimit.middleware());
 
 app.use((req, res, next) => {
   const start = Date.now();

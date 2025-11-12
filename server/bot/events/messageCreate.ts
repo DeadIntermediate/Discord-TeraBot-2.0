@@ -3,6 +3,7 @@ import { storage } from '../../storage';
 import { info, debug, error } from '../../utils/logger';
 import { getOrCreateServerMember, updateMemberXP } from '../../utils/memberFactory';
 import { getSafeUserTag } from '../../utils/discordHelpers';
+import { liveMonitor } from '../../utils/liveMonitor';
 
 // XP Configuration for text messages
 const TEXT_XP_PER_MESSAGE = 5;
@@ -59,6 +60,16 @@ export async function messageCreateHandler(message: Message) {
       await storage.updateServerMember(guildId, userId, {
         messageCount: newMessageCount,
       });
+
+      // Log to live monitor
+      liveMonitor.logXPGain(
+        guildId,
+        userId,
+        message.author.username,
+        TEXT_XP_PER_MESSAGE,
+        'text',
+        leveledUp ? (updatedMember.textLevel ?? undefined) : undefined
+      );
 
       // Check if they leveled up
       if (leveledUp) {

@@ -10,6 +10,7 @@ import { startStreamingTracker } from './streamingTracker';
 import { handleReactionAdd, handleReactionRemove } from './commands/roleReactions';
 import { commands } from './commands';
 import { StreamMonitor } from './streamMonitor';
+import { liveMonitor } from '../utils/liveMonitor';
 import { info, warn, error, debug } from '../utils/logger';
 
 const client = new Client({
@@ -36,7 +37,7 @@ commands.forEach(command => {
 });
 
 // Event handlers
-client.once(Events.ClientReady, (c) => {
+client.once(Events.ClientReady, async (c) => {
   readyHandler(c);
   
   // Start stream monitor after bot is ready (only on shard 0 to avoid duplicates)
@@ -50,6 +51,9 @@ client.once(Events.ClientReady, (c) => {
 
   // Start streaming XP tracker
   startStreamingTracker(client);
+
+  // Initialize live monitoring system
+  await liveMonitor.initialize(client);
 });
 
 // Shard-specific events
@@ -105,6 +109,7 @@ process.on('SIGINT', () => {
   if (streamMonitor) {
     streamMonitor.stop();
   }
+  liveMonitor.stop();
   client.destroy();
   process.exit(0);
 });

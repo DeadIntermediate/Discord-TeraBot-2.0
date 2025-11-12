@@ -2,6 +2,7 @@ import { Client, ActivityType } from 'discord.js';
 import { storage } from '../storage';
 import { info, debug, error } from '../utils/logger';
 import { getOrCreateServerMember, updateMemberXP } from '../utils/memberFactory';
+import { liveMonitor } from '../utils/liveMonitor';
 
 // Track users currently streaming
 const streamingSessions = new Map<string, number>();
@@ -76,7 +77,17 @@ async function awardStreamingXp(
     if (member) {
       // Award streaming XP (counts as voice XP)
       const xpGain = timeStreaming * STREAM_XP_PER_MINUTE;
-      await updateMemberXP(guildId, userId, xpGain, 'stream', member);
+      const { member: updatedMember, leveledUp } = await updateMemberXP(guildId, userId, xpGain, 'stream', member);
+
+      // Log to live monitor
+      liveMonitor.logXPGain(
+        guildId,
+        userId,
+        userId, // username - we don't have easy access to the actual username here
+        xpGain,
+        'stream',
+        leveledUp ? (updatedMember.voiceLevel ?? undefined) : undefined
+      );
 
       info(
         `🎬 ${userId} earned ${xpGain} streaming XP after ${timeStreaming}min stream in ${guildId}`

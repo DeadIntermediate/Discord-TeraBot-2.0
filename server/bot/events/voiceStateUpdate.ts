@@ -3,6 +3,7 @@ import { storage } from '../../storage';
 import { info, debug, error } from '../../utils/logger';
 import { getOrCreateServerMember, updateMemberXP } from '../../utils/memberFactory';
 import { getSafeUserTag, getChannelName } from '../../utils/discordHelpers';
+import { liveMonitor } from '../../utils/liveMonitor';
 
 // Track users currently in voice channels
 const voiceSessionStart = new Map<string, number>();
@@ -68,6 +69,16 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
           await storage.updateServerMember(guildId, userId, {
             voiceTime: (member.voiceTime || 0) + timeInVoice,
           });
+          
+          // Log to live monitor
+          liveMonitor.logXPGain(
+            guildId,
+            userId,
+            userTag,
+            xpGained,
+            'voice',
+            leveledUp ? (updatedMember.voiceLevel ?? undefined) : undefined
+          );
           
           // Check if they leveled up
           if (leveledUp) {
@@ -141,6 +152,7 @@ export const startVoiceXpTracker = (client: Client) => {
         // Award XP every 60 seconds if user is actively in voice
         if (timeSinceLastAward >= XP_AWARD_INTERVAL) {
           const [guildId, userId] = sessionKey.split('-');
+          if (!guildId || !userId) continue;
           
           // Get the member to verify they're still in voice
           const guild = client.guilds.cache.get(guildId);
@@ -160,20 +172,30 @@ export const startVoiceXpTracker = (client: Client) => {
           
           // Award periodic XP
           try {
-            let dbMember = await getOrCreateServerMember(guildId, userId);
+            let dbMember = await getOrCreateServerMember(guildId!, userId!);
             
             const xpGained = VOICE_XP_PER_MINUTE;
-            const { member: updatedMember } = await updateMemberXP(
-              guildId,
-              userId,
+            const { member: updatedMember, leveledUp } = await updateMemberXP(
+              guildId!,
+              userId!,
               xpGained,
               'voice',
               dbMember
             );
             
-            await storage.updateServerMember(guildId, userId, {
+            await storage.updateServerMember(guildId!, userId!, {
               voiceTime: (dbMember.voiceTime || 0) + 1,
             });
+            
+            // Log to live monitor
+            liveMonitor.logXPGain(
+              guildId!,
+              userId!,
+              member.user.username,
+              xpGained,
+              'voice',
+              leveledUp ? (updatedMember.voiceLevel ?? undefined) : undefined
+            );
             
             debug(`⏰ Periodic XP: ${member.user.tag} in ${guild.name} → +${xpGained} XP (${updatedMember.voiceTime}m total)`);
           } catch (err) {
