@@ -224,11 +224,14 @@ export class StreamMonitor {
           // You can choose to delete it or edit it to say "Stream ended"
           // await message.delete();
           
-          const embed = EmbedBuilder.from(message.embeds[0])
-            .setColor(0x95A5A6)
-            .setFooter({ text: 'Stream Ended' });
-          
-          await message.edit({ embeds: [embed] });
+          const currentEmbed = message.embeds[0];
+          if (currentEmbed) {
+            const embed = EmbedBuilder.from(currentEmbed)
+              .setColor(0x95A5A6)
+              .setFooter({ text: 'Stream Ended' });
+            
+            await message.edit({ embeds: [embed] });
+          }
         }
       } catch (err) {
         error('Error updating offline status:', err);
@@ -236,32 +239,54 @@ export class StreamMonitor {
     }
   }
 
+  /**
+   * Check Twitch stream status via API
+   * Not yet implemented - OAuth flow is the preferred method for Twitch
+   * 
+   * Implementation requires:
+   * 1. Register app at https://dev.twitch.tv/console
+   * 2. Set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET in .env
+   * 3. Use Twitch Helix API: GET https://api.twitch.tv/helix/streams?user_login={username}
+   * 4. Implement OAuth token refresh mechanism
+   * 
+   * Note: Users should use the OAuth button method via /stream add for Twitch
+   */
   private async checkTwitch(username: string): Promise<StreamData | null> {
-    // TODO: Implement Twitch API check
-    // You'll need to:
-    // 1. Register app at https://dev.twitch.tv/
-    // 2. Get Client ID and Secret
-    // 3. Use Twitch Helix API: GET https://api.twitch.tv/helix/streams?user_login={username}
     
     debug(`[Twitch] Checking ${username} (API not implemented)`);
     return null;
   }
 
+  /**
+   * Check YouTube live stream status via API
+   * Not yet implemented - requires Google Cloud project setup
+   * 
+   * Implementation requires:
+   * 1. Create project in Google Cloud Console (https://console.cloud.google.com)
+   * 2. Enable YouTube Data API v3
+   * 3. Create API key and set YOUTUBE_API_KEY in .env
+   * 4. Use endpoint: GET https://www.googleapis.com/youtube/v3/search
+   *    Parameters: part=snippet, channelId={channelId}, eventType=live, type=video
+   * 5. Handle quota limits (10,000 units per day for free tier)
+   * 
+   * Alternative: YouTube RSS feeds (no API key needed but less reliable)
+   */
   private async checkYouTube(username: string): Promise<StreamData | null> {
-    // TODO: Implement YouTube API check
-    // You'll need to:
-    // 1. Create project in Google Cloud Console
-    // 2. Enable YouTube Data API v3
-    // 3. Get API key
-    // 4. Use endpoint: GET https://www.googleapis.com/youtube/v3/search?part=snippet&channelId={channelId}&eventType=live&type=video
     
     debug(`[YouTube] Checking ${username} (API not implemented)`);
     return null;
   }
 
+  /**
+   * Check Kick stream status via public API
+   * Partially implemented - basic structure in place
+   * 
+   * Kick provides a public API: GET https://kick.com/api/v2/channels/{username}
+   * No authentication required for basic channel info
+   * 
+   * Current status: Basic fetch implemented below, needs testing and error handling
+   */
   private async checkKick(username: string): Promise<StreamData | null> {
-    // TODO: Implement Kick API check
-    // Kick has a public API: GET https://kick.com/api/v2/channels/{username}
     
     try {
       const response = await fetch(`https://kick.com/api/v2/channels/${username}`);

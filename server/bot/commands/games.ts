@@ -12,7 +12,7 @@ import {
   MessageFlags
 } from 'discord.js';
 import { gameAPI, GameData, GameScreenshot } from '../../utils/gameAPI';
-import { debug, error as logError, info } from '../../utils/logger';
+import { debug, error as logError } from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('game')
@@ -116,11 +116,14 @@ async function handleSearch(interaction: ChatInputCommandInteraction) {
 
     if (searchResults.results.length === 1) {
       // If only one result, show detailed info directly
-      return await showGameDetails(interaction, searchResults.results[0]);
+      const firstGame = searchResults.results[0];
+      if (firstGame) {
+        return await showGameDetails(interaction, firstGame);
+      }
     }
 
     // Create selection menu for multiple results (limit to 5 options)
-    const options = searchResults.results.slice(0, 5).map((game, index) => 
+    const options = searchResults.results.slice(0, 5).map((game) => 
       new StringSelectMenuOptionBuilder()
         .setLabel(game.name.length > 100 ? game.name.substring(0, 97) + '...' : game.name)
         .setDescription(`${game.released || 'Unknown year'} • Rating: ${gameAPI.formatRating(game.rating, game.rating_top)}`)
@@ -261,7 +264,13 @@ async function handleInfo(interaction: ChatInputCommandInteraction) {
 
     // Use the first result (most relevant)
     const game = searchResults.results[0];
-    await showGameDetails(interaction, game);
+    if (!game) {
+      return await interaction.editReply({
+        content: `❌ No game found for "${gameQuery}".`
+      });
+    }
+    
+    return await showGameDetails(interaction, game);
   } catch (error) {
     logError('Error getting game info:', error);
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -293,9 +302,12 @@ async function handleRandom(interaction: ChatInputCommandInteraction) {
     }
 
     if (count === 1) {
-      await showGameDetails(interaction, randomGames[0]);
+      const firstGame = randomGames[0];
+      if (firstGame) {
+        return await showGameDetails(interaction, firstGame);
+      }
     } else {
-      await showGameList(interaction, randomGames, '🎲 Random Games');
+      return await showGameList(interaction, randomGames, '🎲 Random Games');
     }
   } catch (error) {
     logError('Error getting random games:', error);
@@ -327,7 +339,7 @@ async function handleTrending(interaction: ChatInputCommandInteraction) {
       });
     }
 
-    await showGameList(interaction, trendingGames, '🔥 Trending Games');
+    return await showGameList(interaction, trendingGames, '🔥 Trending Games');
   } catch (error) {
     logError('Error getting trending games:', error);
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -429,7 +441,10 @@ async function showGameDetails(interaction: ChatInputCommandInteraction, game: G
 
     // Add screenshot if available
     if (screenshots && screenshots.length > 0) {
-      embed.setImage(screenshots[0].image);
+      const firstScreenshot = screenshots[0];
+      if (firstScreenshot) {
+        embed.setImage(firstScreenshot.image);
+      }
     }
 
     // Create buttons for additional actions
@@ -468,7 +483,7 @@ async function showGameDetails(interaction: ChatInputCommandInteraction, game: G
     // Add stores/purchase links
     if (gameInfo.stores && gameInfo.stores.length > 0) {
       const store = gameInfo.stores[0];
-      if (store.url) {
+      if (store && store.url) {
         buttons.push(
           new ButtonBuilder()
             .setURL(store.url)
@@ -562,6 +577,13 @@ async function showGameScreenshots(interaction: any, game: GameData, screenshots
 
   const createScreenshotEmbed = (index: number) => {
     const screenshot = screenshots[index];
+    if (!screenshot) {
+      return new EmbedBuilder()
+        .setColor(gameAPI.getRatingColor(game.rating))
+        .setTitle(`📸 ${game.name} - Screenshots`)
+        .setDescription('Screenshot not available')
+        .setFooter({ text: `Screenshot ${index + 1} of ${maxIndex}` });
+    }
     
     return new EmbedBuilder()
       .setColor(gameAPI.getRatingColor(game.rating))

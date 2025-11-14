@@ -12,6 +12,7 @@ import {
   MessageFlags
 } from 'discord.js';
 import { storage } from '../../storage';
+import { error as logError } from '../../utils/logger';
 
 const createTicketCommand = {
   data: new SlashCommandBuilder()
@@ -197,7 +198,7 @@ const createTicketCommand = {
       }
 
     } catch (error) {
-      console.error('Error creating ticket:', error);
+      logError('Error creating ticket:', error);
       await interaction.reply({
         content: 'An error occurred while creating your ticket. Please try again or contact an administrator.',
         flags: MessageFlags.Ephemeral
@@ -281,7 +282,7 @@ const ticketManageCommand = {
           break;
       }
     } catch (error) {
-      console.error(`Error in ticket-manage ${subcommand}:`, error);
+      logError(`Error in ticket-manage ${subcommand}:`, error);
       await interaction.reply({
         content: 'An error occurred while processing your request.',
         flags: MessageFlags.Ephemeral
@@ -341,7 +342,7 @@ async function handleCloseTicket(interaction: ChatInputCommandInteraction) {
         await channel.delete('Ticket closed');
       }
     } catch (error) {
-      console.error('Error deleting ticket channel:', error);
+      logError('Error deleting ticket channel:', error);
     }
   }, 10000);
 }
@@ -411,8 +412,12 @@ async function handleListTickets(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleTicketTranscript(interaction: ChatInputCommandInteraction) {
-  await interaction.reply({ content: 'Transcript generation is not yet implemented.', flags: MessageFlags.Ephemeral });
-  // TODO: Implement transcript generation
+  // Transcript generation feature is planned for future implementation
+  // Would include: Full message history export, attachments preservation, participant list, timestamps
+  await interaction.reply({ 
+    content: '📋 Transcript generation is not yet available. This feature is planned for a future update.', 
+    flags: MessageFlags.Ephemeral 
+  });
 }
 
 export const ticketCommands = [createTicketCommand, ticketManageCommand];

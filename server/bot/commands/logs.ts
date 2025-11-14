@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { storage } from '../../storage.js';
+import { error as logError } from '../../utils/logger';
 
 const logsCommand = {
   data: new SlashCommandBuilder()
@@ -144,26 +145,32 @@ const logsCommand = {
       });
 
       // Split into groups of 10 if necessary
-      const embed_groups = [];
+      const embed_groups: EmbedBuilder[][] = [];
       for (let i = 0; i < embeds.length; i += 10) {
         embed_groups.push(embeds.slice(i, i + 10));
       }
 
-      // Send first group
-      await interaction.editReply({
-        embeds: embed_groups[0],
-        content: `📋 **Recent Logs** (showing ${logs.length})`
-      });
+      // Send first group (always exists since we have at least one embed)
+      const firstGroup = embed_groups[0];
+      if (firstGroup) {
+        await interaction.editReply({
+          embeds: firstGroup,
+          content: `📋 **Recent Logs** (showing ${logs.length})`
+        });
+      }
 
       // If there are more groups, send them as follow-ups
       for (let i = 1; i < embed_groups.length; i++) {
-        await interaction.followUp({
-          embeds: embed_groups[i],
-          flags: MessageFlags.Ephemeral
-        });
+        const group = embed_groups[i];
+        if (group) {
+          await interaction.followUp({
+            embeds: group,
+            flags: MessageFlags.Ephemeral
+          });
+        }
       }
     } catch (error) {
-      console.error('Error fetching logs:', error);
+      logError('Error fetching logs:', error);
       await interaction.editReply({
         content: '❌ An error occurred while fetching logs.'
       });

@@ -15,9 +15,16 @@ import {
   GuildMember,
   PartialMessageReaction,
   PartialUser,
-  MessageFlags
+  MessageFlags,
+  ContextMenuCommandBuilder,
+  ApplicationCommandType,
+  MessageContextMenuCommandInteraction,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle
 } from 'discord.js';
 import { storage } from '../../storage';
+import { error as logError } from '../../utils/logger';
 
 const roleReactionCommand = {
   data: new SlashCommandBuilder()
@@ -48,7 +55,23 @@ const roleReactionCommand = {
         .setDescription('Add a role-emoji pair to an existing message')
         .addStringOption(option =>
           option.setName('message-id')
-            .setDescription('Message ID to add reaction to')
+            .setDescription('Message ID or message link')
+            .setRequired(true))
+        .addRoleOption(option =>
+          option.setName('role')
+            .setDescription('Role to assign')
+            .setRequired(true))
+        .addStringOption(option =>
+          option.setName('emoji')
+            .setDescription('Emoji to react with')
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('attach')
+        .setDescription('Attach reaction roles to any message using message link')
+        .addStringOption(option =>
+          option.setName('message-link')
+            .setDescription('Right-click message → Copy Message Link')
             .setRequired(true))
         .addRoleOption(option =>
           option.setName('role')
@@ -109,6 +132,9 @@ const roleReactionCommand = {
         case 'add':
           await handleAddRoleReaction(interaction);
           break;
+        case 'attach':
+          await handleAttachToMessage(interaction);
+          break;
         case 'remove':
           await handleRemoveRoleReaction(interaction);
           break;
@@ -120,7 +146,7 @@ const roleReactionCommand = {
           break;
       }
     } catch (error) {
-      console.error(`Error in rolereaction ${subcommand}:`, error);
+      logError(`Error in rolereaction ${subcommand}:`, error);
       await interaction.reply({
         content: 'An error occurred while processing your request.',
         flags: MessageFlags.Ephemeral
@@ -234,8 +260,10 @@ async function handleAddRoleReaction(interaction: ChatInputCommandInteraction) {
         
         // Update the field
         const fieldIndex = existingFields.findIndex(field => field.name === '🎭 Available Roles');
-        existingFields[fieldIndex].value = newValue;
-        updatedEmbed.setFields(existingFields);
+        if (fieldIndex !== -1 && existingFields[fieldIndex]) {
+          existingFields[fieldIndex].value = newValue;
+          updatedEmbed.setFields(existingFields);
+        }
       }
 
       await message.edit({ embeds: [updatedEmbed] });
@@ -247,9 +275,94 @@ async function handleAddRoleReaction(interaction: ChatInputCommandInteraction) {
     });
 
   } catch (error) {
-    console.error('Error adding role reaction:', error);
+    logError('Error adding role reaction:', error);
     await interaction.reply({
       content: 'Failed to add role reaction. Make sure the emoji is valid and accessible.',
+      flags: MessageFlags.Ephemeral
+    });
+  }
+}
+
+async function handleAttachToMessage(interaction: ChatInputCommandInteraction) {
+  const messageLink = interaction.options.getString('message-link', true);
+  const role = interaction.options.getRole('role', true);
+  const emoji = interaction.options.getString('emoji', true);
+
+  if (!interaction.guild) return;
+
+  try {
+    // Parse message link: https://discord.com/channels/GUILD_ID/CHANNEL_ID/MESSAGE_ID
+    const linkParts = messageLink.split('/');
+    if (linkParts.length < 7 || !linkParts.includes('channels')) {
+      await interaction.reply({
+        content: '❌ Invalid message link! Right-click a message and select "Copy Message Link"',
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    const channelId = linkParts[linkParts.length - 2];
+    const messageId = linkParts[linkParts.length - 1];
+
+    if (!channelId || !messageId) {
+      await interaction.reply({
+        content: '❌ Could not parse message link.',
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    // Fetch the channel
+    const channel = await interaction.guild.channels.fetch(channelId);
+    if (!channel || !channel.isTextBased()) {
+      await interaction.reply({
+        content: '❌ Channel not found or is not a text channel.',
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    // Fetch the message
+    const message = await (channel as TextChannel).messages.fetch(messageId);
+    if (!message) {
+      await interaction.reply({
+        content: '❌ Message not found in that channel.',
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    // Check if bot can manage this role
+    const botMember = await interaction.guild.members.fetch(interaction.client.user.id);
+    if (role.position >= botMember.roles.highest.position) {
+      await interaction.reply({ 
+        content: '❌ I cannot assign this role because it is higher than or equal to my highest role.', 
+        flags: MessageFlags.Ephemeral 
+      });
+      return;
+    }
+
+    // Add reaction to message
+    await message.react(emoji);
+
+    // Save to database
+    await storage.createRoleReaction({
+      serverId: interaction.guild.id,
+      channelId: message.channel.id,
+      messageId: message.id,
+      emoji: emoji,
+      roleId: role.id,
+    });
+
+    await interaction.reply({
+      content: `✅ Reaction role attached!\n**Message:** [Jump to message](${message.url})\n**Reaction:** ${emoji} → ${role}\n\nUsers can now react to get this role!`,
+      flags: MessageFlags.Ephemeral
+    });
+
+  } catch (error) {
+    logError('Error attaching role reaction:', error);
+    await interaction.reply({
+      content: '❌ Failed to attach role reaction. Make sure:\n• The message link is valid\n• I have permission to read the channel\n• The emoji is valid and accessible',
       flags: MessageFlags.Ephemeral
     });
   }
@@ -295,7 +408,7 @@ async function handleRemoveRoleReaction(interaction: ChatInputCommandInteraction
     });
 
   } catch (error) {
-    console.error('Error removing role reaction:', error);
+    logError('Error removing role reaction:', error);
     await interaction.reply({
       content: 'Failed to remove role reaction.',
       flags: MessageFlags.Ephemeral
@@ -412,7 +525,7 @@ async function handleCreateTemplate(interaction: ChatInputCommandInteraction) {
     });
 
   } catch (error) {
-    console.error('Error creating template:', error);
+    logError('Error creating template:', error);
     await interaction.reply({
       content: 'Failed to create template.',
       flags: MessageFlags.Ephemeral
@@ -447,7 +560,7 @@ export async function handleReactionAdd(reaction: MessageReaction | PartialMessa
     const role = guild.roles.cache.get(roleReaction.roleId);
 
     if (!role) {
-      console.error(`Role ${roleReaction.roleId} not found for reaction ${roleReaction.emoji}`);
+      logError(`Role ${roleReaction.roleId} not found for reaction ${roleReaction.emoji}`);
       return;
     }
 
@@ -473,7 +586,7 @@ export async function handleReactionAdd(reaction: MessageReaction | PartialMessa
     }
 
   } catch (error) {
-    console.error('Error handling reaction add:', error);
+    logError('Error handling reaction add:', error);
   }
 }
 
@@ -503,7 +616,7 @@ export async function handleReactionRemove(reaction: MessageReaction | PartialMe
     const role = guild.roles.cache.get(roleReaction.roleId);
 
     if (!role) {
-      console.error(`Role ${roleReaction.roleId} not found for reaction ${roleReaction.emoji}`);
+      logError(`Role ${roleReaction.roleId} not found for reaction ${roleReaction.emoji}`);
       return;
     }
 
@@ -529,8 +642,66 @@ export async function handleReactionRemove(reaction: MessageReaction | PartialMe
     }
 
   } catch (error) {
-    console.error('Error handling reaction remove:', error);
+    logError('Error handling reaction remove:', error);
   }
 }
 
-export const roleReactionCommands = [roleReactionCommand];
+// Context menu command to attach reaction roles to any message
+const attachRoleReactionCommand = {
+  data: new ContextMenuCommandBuilder()
+    .setName('Attach Reaction Roles')
+    .setType(ApplicationCommandType.Message)
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
+
+  async execute(interaction: MessageContextMenuCommandInteraction) {
+    if (!interaction.guild) {
+      await interaction.reply({ 
+        content: 'This command can only be used in a server.', 
+        flags: MessageFlags.Ephemeral 
+      });
+      return;
+    }
+
+    const targetMessage = interaction.targetMessage;
+
+    const embed = new EmbedBuilder()
+      .setColor(0x5865f2)
+      .setTitle('📝 Attach Reaction Roles')
+      .setDescription(`Selected message: [Jump to message](${targetMessage.url})\n\nUse the command below to add reaction roles to this message:`)
+      .addFields({
+        name: '💡 How to add reactions',
+        value: `\`\`\`\n/rolereaction add message-id:${targetMessage.id} role:@Role emoji:😀\n\`\`\``,
+        inline: false
+      })
+      .addFields({
+        name: '📋 Message ID',
+        value: `\`${targetMessage.id}\``,
+        inline: true
+      })
+      .addFields({
+        name: '📍 Channel',
+        value: `<#${targetMessage.channel.id}>`,
+        inline: true
+      })
+      .setFooter({ text: 'Copy the command above and fill in your role and emoji' })
+      .setTimestamp();
+
+    // Show button to quick-add a role
+    const row = new ActionRowBuilder<ButtonBuilder>()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId(`quick-add-role_${targetMessage.id}`)
+          .setLabel('Quick Add Role')
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji('➕')
+      );
+
+    await interaction.reply({
+      embeds: [embed],
+      components: [row],
+      flags: MessageFlags.Ephemeral
+    });
+  }
+};
+
+export const roleReactionCommands = [roleReactionCommand, attachRoleReactionCommand];

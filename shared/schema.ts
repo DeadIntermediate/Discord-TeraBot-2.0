@@ -567,4 +567,21 @@ export type GuildBackup = typeof guildBackups.$inferSelect;
 export type InsertBackupRestoreHistory = z.infer<typeof insertBackupRestoreHistorySchema>;
 export type BackupRestoreHistory = typeof backupRestoreHistory.$inferSelect;
 
+// Command Usage Analytics
+export const commandUsageAnalytics = pgTable("command_usage_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  commandName: varchar("command_name").notNull(),
+  userId: varchar("user_id").notNull(),
+  guildId: varchar("guild_id"),
+  success: boolean("success").notNull().default(true),
+  executionTime: integer("execution_time"), // milliseconds
+  errorMessage: text("error_message"),
+  executedAt: timestamp("executed_at").defaultNow().notNull(),
+});
+
+export const insertCommandUsageAnalyticsSchema = createInsertSchema(commandUsageAnalytics);
+export type InsertCommandUsageAnalytics = z.infer<typeof insertCommandUsageAnalyticsSchema>;
+export type CommandUsageAnalytics = typeof commandUsageAnalytics.$inferSelect;
+
 // CAH types removed
+

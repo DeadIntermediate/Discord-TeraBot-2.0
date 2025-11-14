@@ -4,8 +4,7 @@ import {
   EmbedBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ActionRowBuilder,
-  MessageFlags
+  ActionRowBuilder
 } from 'discord.js';
 
 export const data = new SlashCommandBuilder()

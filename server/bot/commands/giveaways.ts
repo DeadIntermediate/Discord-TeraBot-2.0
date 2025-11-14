@@ -13,6 +13,8 @@ import {
   MessageFlags
 } from 'discord.js';
 import { storage } from '../../storage';
+import { client } from '../index';
+import { error as logError } from '../../utils/logger';
 
 const createGiveawayCommand = {
   data: new SlashCommandBuilder()
@@ -153,7 +155,7 @@ const createGiveawayCommand = {
       }, durationMinutes * 60 * 1000);
 
     } catch (error) {
-      console.error('Error creating giveaway:', error);
+      logError('Error creating giveaway:', error);
       await interaction.reply({
         content: 'An error occurred while creating the giveaway.',
         flags: MessageFlags.Ephemeral
@@ -218,7 +220,7 @@ const giveawayManageCommand = {
           break;
       }
     } catch (error) {
-      console.error(`Error in giveaway-manage ${subcommand}:`, error);
+      logError(`Error in giveaway-manage ${subcommand}:`, error);
       await interaction.reply({
         content: 'An error occurred while processing your request.',
         flags: MessageFlags.Ephemeral
@@ -342,7 +344,6 @@ async function endGiveaway(giveawayId: string) {
     });
 
     // Get the channel and message
-    const client = require('../index').client; // This is a hack, in a real app you'd pass the client properly
     const channel = await client.channels.fetch(giveaway.channelId) as TextChannel;
     const message = await channel.messages.fetch(giveaway.messageId);
 
@@ -413,12 +414,13 @@ function selectRandomWinners(entries: string[], winnerCount: number): string[] {
   const uniqueEntries = [...new Set(entries)]; // Remove duplicates
   const actualWinnerCount = Math.min(winnerCount, uniqueEntries.length);
   
-  const winners = [];
+  const winners: string[] = [];
   const entriesCopy = [...uniqueEntries];
   
   for (let i = 0; i < actualWinnerCount; i++) {
     const randomIndex = Math.floor(Math.random() * entriesCopy.length);
-    winners.push(entriesCopy.splice(randomIndex, 1)[0]);
+    const winner = entriesCopy.splice(randomIndex, 1)[0];
+    if (winner) winners.push(winner);
   }
   
   return winners;

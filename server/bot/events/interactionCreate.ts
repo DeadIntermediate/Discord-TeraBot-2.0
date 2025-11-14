@@ -1,7 +1,12 @@
-import { Interaction, ChatInputCommandInteraction, ButtonInteraction, EmbedBuilder } from 'discord.js';
+import { Interaction, ChatInputCommandInteraction, ButtonInteraction, ModalSubmitInteraction, StringSelectMenuInteraction, EmbedBuilder } from 'discord.js';
 import { storage } from '../../storage';
 import { handleEmbedBuilderInteraction } from '../commands/embeds';
 import { handleStreamButtons, handleStreamModal } from '../commands/streams';
+import { cooldownManager } from '../../utils/cooldownManager';
+import { rateLimiter } from '../../utils/rateLimiter';
+import { errorReporter } from '../../utils/errorReporter';
+import { commandAnalytics } from '../../utils/commandAnalytics';
+import { error as logError } from '../../utils/logger';
 
 export async function interactionCreateHandler(interaction: Interaction) {
   if (interaction.isChatInputCommand()) {
@@ -19,15 +24,102 @@ async function handleSlashCommand(interaction: ChatInputCommandInteraction) {
   const command = (interaction.client as any).commands.get(interaction.commandName);
 
   if (!command) {
-    console.error(`No command matching ${interaction.commandName} was found.`);
+    logError(`No command matching ${interaction.commandName} was found.`);
     return;
   }
 
+  const startTime = Date.now();
+  const userId = interaction.user.id;
+  const guildId = interaction.guildId || undefined;
+  const isBypassed = cooldownManager.isBypassed(userId, guildId) || rateLimiter.isBypassed(userId);
+
   try {
+    // Check rate limit first (global limit across all commands)
+    if (!isBypassed) {
+      const rateLimitCheck = rateLimiter.checkLimit(userId);
+      
+      if (!rateLimitCheck.allowed) {
+        await interaction.reply({
+          content: rateLimitCheck.message,
+          ephemeral: true
+        });
+        
+        await commandAnalytics.recordCommand({
+          commandName: interaction.commandName,
+          userId,
+          ...(guildId && { guildId }),
+          success: false,
+          errorMessage: 'Rate limit exceeded'
+        });
+        
+        return;
+      }
+    }
+
+    // Check cooldown (per-command limit)
+    if (!isBypassed) {
+      const cooldownCheck = cooldownManager.checkCooldown(userId, interaction.commandName);
+      
+      if (cooldownCheck.isOnCooldown) {
+        await interaction.reply({
+          content: `⏰ ${cooldownCheck.message}`,
+          ephemeral: true
+        });
+        
+        await commandAnalytics.recordCommand({
+          commandName: interaction.commandName,
+          userId,
+          ...(guildId && { guildId }),
+          success: false,
+          errorMessage: 'Command on cooldown'
+        });
+        
+        return;
+      }
+    }
+
+    // Execute command
     await command.execute(interaction);
-  } catch (error) {
-    console.error('Error executing command:', error);
     
+    // Record command usage for rate limiting and cooldowns
+    if (!isBypassed) {
+      rateLimiter.recordCommand(userId);
+      cooldownManager.setCooldown(userId, interaction.commandName);
+    }
+    
+    // Record successful command execution
+    const executionTime = Date.now() - startTime;
+    await commandAnalytics.recordCommand({
+      commandName: interaction.commandName,
+      userId,
+      ...(guildId && { guildId }),
+      success: true,
+      executionTime
+    });
+  } catch (error) {
+    logError('Error executing command:', error);
+    
+    // Report and record error
+    if (error instanceof Error) {
+      await errorReporter.reportCommandError(
+        error,
+        interaction.commandName,
+        userId,
+        guildId
+      );
+      
+      const executionTime = Date.now() - startTime;
+      await commandAnalytics.recordCommand({
+        commandName: interaction.commandName,
+        userId,
+        ...(guildId && { guildId }),
+        success: false,
+        executionTime,
+        errorMessage: error.message
+      });
+    }
+    
+    // Reply to user
     const errorMessage = { 
       content: 'There was an error while executing this command!', 
       ephemeral: true 
@@ -41,25 +133,29 @@ async function handleSlashCommand(interaction: ChatInputCommandInteraction) {
   }
 }
 
+/**
+ * Helper function to safely reply with error messages
+ */
+async function replyWithError(interaction: any, message: string) {
+  const errorMessage = { content: message, ephemeral: true };
+  
+  if (interaction.replied || interaction.deferred) {
+    await interaction.followUp(errorMessage);
+  } else {
+    await interaction.reply(errorMessage);
+  }
+}
+
 async function handleButtonInteraction(interaction: ButtonInteraction) {
   try {
-    const customId = interaction.customId;
+    const { customId } = interaction;
 
-    // Check for embed builder interactions first
+    // Route to appropriate handler
     if (customId.startsWith('embed_')) {
       await handleEmbedBuilderInteraction(interaction);
-      return;
-    }
-
-    // Check for stream button interactions
-    if (customId.startsWith('stream_add_')) {
+    } else if (customId.startsWith('stream_add_')) {
       await handleStreamButtons(interaction);
-      return;
-    }
-
-    // CAH feature removed — no routing necessary
-
-    if (customId.startsWith('ticket_close_')) {
+    } else if (customId.startsWith('ticket_close_')) {
       await handleTicketClose(interaction);
     } else if (customId.startsWith('ticket_assign_')) {
       await handleTicketAssign(interaction);
@@ -69,76 +165,38 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
       await handleGiveawayEntry(interaction);
     }
   } catch (error) {
-    console.error('Error handling button interaction:', error);
-    
-    const errorMessage = { 
-      content: 'There was an error while processing this action!', 
-      ephemeral: true 
-    };
-
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(errorMessage);
-    } else {
-      await interaction.reply(errorMessage);
-    }
+    logError('Error handling button interaction:', error);
+    await replyWithError(interaction, 'There was an error while processing this action!');
   }
 }
 
-async function handleModalInteraction(interaction: any) {
+async function handleModalInteraction(interaction: ModalSubmitInteraction) {
   try {
-    // Check for embed builder modals
-    if (interaction.customId.startsWith('embed_')) {
-      await handleEmbedBuilderInteraction(interaction);
-      return;
-    }
+    const { customId } = interaction;
 
-    // Check for stream modals
-    if (interaction.customId.startsWith('stream_modal_')) {
+    // Route to appropriate handler
+    if (customId.startsWith('embed_')) {
+      await handleEmbedBuilderInteraction(interaction);
+    } else if (customId.startsWith('stream_modal_')) {
       await handleStreamModal(interaction);
-      return;
     }
-
-    // Handle other modals here
   } catch (error) {
-    console.error('Error handling modal interaction:', error);
-    
-    const errorMessage = { 
-      content: 'There was an error while processing this modal!', 
-      ephemeral: true 
-    };
-
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(errorMessage);
-    } else {
-      await interaction.reply(errorMessage);
-    }
+    logError('Error handling modal interaction:', error);
+    await replyWithError(interaction, 'There was an error while processing this modal!');
   }
 }
 
-async function handleSelectMenuInteraction(interaction: any) {
+async function handleSelectMenuInteraction(interaction: StringSelectMenuInteraction) {
   try {
-    // Check for embed builder select menus
-    if (interaction.customId.startsWith('embed_')) {
+    const { customId } = interaction;
+
+    // Route to appropriate handler
+    if (customId.startsWith('embed_')) {
       await handleEmbedBuilderInteraction(interaction);
-      return;
     }
-
-    // CAH feature removed — no routing necessary
-
-    // Handle other select menus here
   } catch (error) {
-    console.error('Error handling select menu interaction:', error);
-    
-    const errorMessage = { 
-      content: 'There was an error while processing this selection!', 
-      ephemeral: true 
-    };
-
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(errorMessage);
-    } else {
-      await interaction.reply(errorMessage);
-    }
+    logError('Error handling select menu interaction:', error);
+    await replyWithError(interaction, 'There was an error while processing this selection!');
   }
 }
 
@@ -147,12 +205,12 @@ async function handleTicketClose(interaction: ButtonInteraction) {
   const ticket = await storage.getTicket(ticketId);
 
   if (!ticket) {
-    await interaction.reply({ content: 'Ticket not found.', ephemeral: true });
+    await replyWithError(interaction, 'Ticket not found.');
     return;
   }
 
   if (ticket.status === 'closed') {
-    await interaction.reply({ content: 'This ticket is already closed.', ephemeral: true });
+    await replyWithError(interaction, 'This ticket is already closed.');
     return;
   }
 
@@ -181,7 +239,7 @@ async function handleTicketClose(interaction: ButtonInteraction) {
         await channel.delete('Ticket closed');
       }
     } catch (error) {
-      console.error('Error deleting ticket channel:', error);
+      logError('Error deleting ticket channel:', error);
     }
   }, 10000);
 }
@@ -191,12 +249,12 @@ async function handleTicketAssign(interaction: ButtonInteraction) {
   const ticket = await storage.getTicket(ticketId);
 
   if (!ticket) {
-    await interaction.reply({ content: 'Ticket not found.', ephemeral: true });
+    await replyWithError(interaction, 'Ticket not found.');
     return;
   }
 
   if (ticket.assignedTo === interaction.user.id) {
-    await interaction.reply({ content: 'This ticket is already assigned to you.', ephemeral: true });
+    await replyWithError(interaction, 'This ticket is already assigned to you.');
     return;
   }
 
@@ -214,17 +272,15 @@ async function handleTicketAssign(interaction: ButtonInteraction) {
 }
 
 async function handleTicketPriority(interaction: ButtonInteraction) {
-  // For now, just acknowledge the interaction
-  // TODO: Implement priority change modal
-  await interaction.reply({ 
-    content: 'Priority change feature is not yet implemented. Use `/ticket-manage` for now.', 
-    ephemeral: true 
-  });
+  await replyWithError(
+    interaction,
+    'Priority change feature is not yet implemented. Use `/ticket-manage` for now.'
+  );
 }
 
 async function handleGiveawayEntry(interaction: ButtonInteraction) {
   if (!interaction.guild) {
-    await interaction.reply({ content: 'This can only be used in a server.', ephemeral: true });
+    await replyWithError(interaction, 'This can only be used in a server.');
     return;
   }
 
@@ -233,78 +289,71 @@ async function handleGiveawayEntry(interaction: ButtonInteraction) {
     const giveaways = await storage.getActiveGiveaways(interaction.guild.id);
     const giveaway = giveaways.find(g => g.messageId === interaction.message.id);
 
-    if (!giveaway) {
-      await interaction.reply({ content: 'This giveaway was not found or has ended.', ephemeral: true });
+    if (!giveaway || !giveaway.isActive) {
+      await replyWithError(interaction, 'This giveaway was not found or has ended.');
       return;
     }
 
-    if (!giveaway.isActive) {
-      await interaction.reply({ content: 'This giveaway has already ended.', ephemeral: true });
+    // Get member and validate
+    const member = interaction.guild.members.cache.get(interaction.user.id);
+    if (!member) {
+      await replyWithError(interaction, 'Could not verify your server membership.');
       return;
     }
 
     // Check requirements
-    const member = interaction.guild.members.cache.get(interaction.user.id);
-    if (!member) {
-      await interaction.reply({ content: 'Could not verify your server membership.', ephemeral: true });
+    const requirements = (giveaway.requirements as any) || {};
+    
+    if (requirements.requiredRoleId && !member.roles.cache.has(requirements.requiredRoleId)) {
+      await replyWithError(
+        interaction,
+        `You need the <@&${requirements.requiredRoleId}> role to enter this giveaway.`
+      );
       return;
     }
 
-    const requirements = giveaway.requirements as any || {};
-    
-    // Check required role
-    if (requirements.requiredRoleId) {
-      if (!member.roles.cache.has(requirements.requiredRoleId)) {
-        await interaction.reply({ 
-          content: `You need the <@&${requirements.requiredRoleId}> role to enter this giveaway.`, 
-          ephemeral: true 
-        });
-        return;
-      }
-    }
-
-    // Check account age
     if (requirements.minAccountAgeDays) {
-      const accountAge = Date.now() - interaction.user.createdAt.getTime();
-      const accountAgeDays = Math.floor(accountAge / (1000 * 60 * 60 * 24));
+      const accountAgeDays = Math.floor(
+        (Date.now() - interaction.user.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+      );
       
       if (accountAgeDays < requirements.minAccountAgeDays) {
-        await interaction.reply({ 
-          content: `Your account must be at least ${requirements.minAccountAgeDays} days old to enter this giveaway.`, 
-          ephemeral: true 
-        });
+        await replyWithError(
+          interaction,
+          `Your account must be at least ${requirements.minAccountAgeDays} days old to enter this giveaway.`
+        );
         return;
       }
     }
 
     // Check if user already entered
-    const currentEntries = giveaway.entries as string[] || [];
+    const currentEntries = (giveaway.entries as string[]) || [];
     if (currentEntries.includes(interaction.user.id)) {
-      await interaction.reply({ content: 'You have already entered this giveaway!', ephemeral: true });
+      await replyWithError(interaction, 'You have already entered this giveaway!');
       return;
     }
 
     // Add user to entries
     const newEntries = [...currentEntries, interaction.user.id];
-    await storage.updateGiveaway(giveaway.id, {
-      entries: newEntries
-    });
+    await storage.updateGiveaway(giveaway.id, { entries: newEntries });
 
     // Update the embed with new entry count
     const currentEmbed = interaction.message.embeds[0];
-    const updatedEmbed = EmbedBuilder.from(currentEmbed);
-    
-    // Find and update the entries field
-    const fields = updatedEmbed.data.fields || [];
-    const entriesFieldIndex = fields.findIndex(field => field.name === '🎯 Entries');
-    if (entriesFieldIndex !== -1) {
-      fields[entriesFieldIndex].value = newEntries.length.toString();
-    }
+    if (currentEmbed) {
+      const updatedEmbed = EmbedBuilder.from(currentEmbed);
+      
+      // Update entries field
+      const fields = updatedEmbed.data.fields || [];
+      const entriesField = fields.find(field => field.name === '🎯 Entries');
+      if (entriesField) {
+        entriesField.value = newEntries.length.toString();
+      }
 
-    await interaction.update({
-      embeds: [updatedEmbed],
-      components: interaction.message.components
-    });
+      await interaction.update({
+        embeds: [updatedEmbed],
+        components: interaction.message.components
+      });
+    }
 
     // Send confirmation DM
     try {
@@ -319,15 +368,12 @@ async function handleGiveawayEntry(interaction: ButtonInteraction) {
         .setTimestamp();
 
       await interaction.user.send({ embeds: [confirmEmbed] });
-    } catch (error) {
-      // User has DMs disabled, silently continue
+    } catch (dmError) {
+      // User has DMs disabled, that's okay
     }
 
   } catch (error) {
-    console.error('Error handling giveaway entry:', error);
-    await interaction.reply({ 
-      content: 'An error occurred while entering the giveaway. Please try again.', 
-      ephemeral: true 
-    });
+    logError('Error handling giveaway entry:', error);
+    await replyWithError(interaction, 'An error occurred while entering the giveaway. Please try again.');
   }
 }

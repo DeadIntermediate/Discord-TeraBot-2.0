@@ -11,7 +11,6 @@ import {
   ButtonStyle,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
-  ComponentType,
   ModalSubmitInteraction,
   StringSelectMenuInteraction,
   ButtonInteraction,
@@ -543,7 +542,7 @@ async function handleModalSubmit(interaction: ModalSubmitInteraction) {
 async function handleSelectMenu(interaction: StringSelectMenuInteraction) {
   if (interaction.customId === 'embed_color_select') {
     const selectedColor = interaction.values[0];
-    const colorValue = colorValues[selectedColor];
+    if (!selectedColor) return;
     
     await interaction.reply({ 
       content: `✅ Embed color set to ${selectedColor}! (Color application not fully implemented)`, 

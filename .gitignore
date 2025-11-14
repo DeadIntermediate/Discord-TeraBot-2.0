@@ -41,3 +41,10 @@ __pycache__/
 .Python
 *.egg-info/
 .pytest_cache/
+
+# Database backups
+db-backups/
+*.sql
+*.sql.gz
+backups/*.sql
+backups/*.sql.gz

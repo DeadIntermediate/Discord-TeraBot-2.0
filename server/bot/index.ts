@@ -11,6 +11,9 @@ import { handleReactionAdd, handleReactionRemove } from './commands/roleReaction
 import { commands } from './commands';
 import { StreamMonitor } from './streamMonitor';
 import { liveMonitor } from '../utils/liveMonitor';
+import { dbBackupScheduler } from '../utils/dbBackupScheduler';
+import { errorReporter } from '../utils/errorReporter';
+import { commandAnalytics } from '../utils/commandAnalytics';
 import { info, warn, error, debug } from '../utils/logger';
 
 const client = new Client({
@@ -40,6 +43,12 @@ commands.forEach(command => {
 client.once(Events.ClientReady, async (c) => {
   readyHandler(c);
   
+  // Initialize error reporter with client
+  errorReporter.initialize(client);
+  
+  // Start command analytics
+  commandAnalytics.start();
+  
   // Start stream monitor after bot is ready (only on shard 0 to avoid duplicates)
   if (!client.shard || client.shard.ids.includes(0)) {
     streamMonitor = new StreamMonitor(client);
@@ -54,6 +63,11 @@ client.once(Events.ClientReady, async (c) => {
 
   // Initialize live monitoring system
   await liveMonitor.initialize(client);
+
+  // Start automated database backups (only on shard 0)
+  if (!client.shard || client.shard.ids.includes(0)) {
+    await dbBackupScheduler.start();
+  }
 });
 
 // Shard-specific events
@@ -110,6 +124,8 @@ process.on('SIGINT', () => {
     streamMonitor.stop();
   }
   liveMonitor.stop();
+  dbBackupScheduler.stop();
+  commandAnalytics.stop();
   client.destroy();
   process.exit(0);
 });

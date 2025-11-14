@@ -16,6 +16,7 @@ import {
 import { db } from '../../db';
 import { discordServers, streamNotifications, discordUsers } from '../../../shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
+import { error as logError, warn } from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('stream')
@@ -479,7 +480,7 @@ async function saveOAuthStreamer(
       });
     } catch (drizzleError: any) {
       // If standard insert fails, try raw SQL with all possible columns
-      console.warn('Drizzle insert failed, trying raw SQL fallback:', drizzleError.message);
+      warn('Drizzle insert failed, trying raw SQL fallback:', drizzleError.message);
       
       const query = `
         INSERT INTO stream_notifications 
@@ -498,7 +499,7 @@ async function saveOAuthStreamer(
 
     return true;
   } catch (error) {
-    console.error('Error saving OAuth streamer:', error);
+    logError('Error saving OAuth streamer:', error);
     throw error;
   }
 }
@@ -674,7 +675,7 @@ export async function handleStreamModal(interaction: any) {
 
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
-      console.error('Error saving OAuth streamer:', error);
+      logError('Error saving OAuth streamer:', error);
       await interaction.editReply({
         content: '❌ An error occurred while adding your account. Please try again or contact an administrator.',
       });
@@ -759,7 +760,7 @@ export async function handleStreamModal(interaction: any) {
       });
     } catch (drizzleError: any) {
       // If standard insert fails, try raw SQL with the actual database column names
-      console.warn('Drizzle insert failed, trying raw SQL fallback:', drizzleError.message);
+      warn('Drizzle insert failed, trying raw SQL fallback:', drizzleError.message);
       
       // The database has both streamer_name and username columns
       await db.execute(sql`
@@ -781,7 +782,7 @@ export async function handleStreamModal(interaction: any) {
 
     await interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    console.error('Error adding stream notification - Full details:', {
+    logError('Error adding stream notification - Full details:', {
       error,
       message: error instanceof Error ? error.message : 'Unknown error',
       username,
