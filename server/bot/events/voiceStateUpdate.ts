@@ -18,8 +18,10 @@ export async function voiceStateUpdateHandler(oldState: VoiceState, newState: Vo
   const guildId = newState.guild.id;
   const sessionKey = `${guildId}-${userId}`;
 
-  // Debug log for all voice state changes
-  info(`🔍 [DEBUG] Voice State Change Detected: User=${userId} | Old Channel=${oldState.channelId || 'null'} | New Channel=${newState.channelId || 'null'}`);
+  // Only log when user actually changes channels (not mute/deafen/stream changes)
+  if (oldState.channelId !== newState.channelId) {
+    debug(`🔍 [DEBUG] Voice State Change Detected: User=${userId} | Old Channel=${oldState.channelId || 'null'} | New Channel=${newState.channelId || 'null'}`);
+  }
 
   // User joined a voice channel
   if (!oldState.channelId && newState.channelId) {

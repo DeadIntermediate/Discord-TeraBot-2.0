@@ -1,4 +1,4 @@
-import { Client, ActivityType } from 'discord.js';
+import { Client, ActivityType, Activity } from 'discord.js';
 import { storage } from '../storage';
 import { info, debug, error } from '../utils/logger';
 import { getOrCreateServerMember, updateMemberXP } from '../utils/memberFactory';
@@ -19,27 +19,40 @@ export function startStreamingTracker(client: Client) {
   setInterval(async () => {
     try {
       for (const guild of client.guilds.cache.values()) {
-        const members = await guild.members.fetch();
+        try {
+          // Fetch members with timeout protection
+          const members = await Promise.race([
+            guild.members.fetch(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Fetch timeout')), 5000)
+            )
+          ]) as any;
 
-        for (const member of members.values()) {
-          if (!member.user.bot) {
-            const isStreaming = member.presence?.activities.some(
-              (activity) =>
-                activity.type === ActivityType.Streaming ||
-                (activity.type === ActivityType.Playing && activity.name === 'Screen Share')
-            );
+          for (const member of members.values()) {
+            if (!member.user.bot) {
+              const isStreaming = member.presence?.activities.some(
+                (activity: Activity) =>
+                  activity.type === ActivityType.Streaming ||
+                  (activity.type === ActivityType.Playing && activity.name === 'Screen Share')
+              );
 
-            const sessionKey = `${guild.id}-${member.id}`;
-            const wasStreaming = streamingSessions.has(sessionKey);
+              const sessionKey = `${guild.id}-${member.id}`;
+              const wasStreaming = streamingSessions.has(sessionKey);
 
-            if (isStreaming && !wasStreaming) {
-              // Started streaming
-              streamingSessions.set(sessionKey, Date.now());
-              info(`🎬 ${member.user.tag} started streaming in ${guild.name}`);
-            } else if (!isStreaming && wasStreaming) {
-              // Stopped streaming
-              await awardStreamingXp(guild.id, member.id, sessionKey);
+              if (isStreaming && !wasStreaming) {
+                // Started streaming
+                streamingSessions.set(sessionKey, Date.now());
+                info(`🎬 ${member.user.tag} started streaming in ${guild.name}`);
+              } else if (!isStreaming && wasStreaming) {
+                // Stopped streaming
+                await awardStreamingXp(guild.id, member.id, sessionKey);
+              }
             }
+          }
+        } catch (guildErr) {
+          // Skip this guild if member fetch fails - don't spam logs
+          if (guildErr instanceof Error && guildErr.message !== 'Fetch timeout') {
+            debug(`Skipping streaming check for ${guild.name}: ${guildErr.message}`);
           }
         }
       }

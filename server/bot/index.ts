@@ -58,7 +58,8 @@ client.once(Events.ClientReady, async (c) => {
   // Start voice XP tracker
   startVoiceXpTracker(client);
 
-  // Start streaming XP tracker
+  // Start Discord streaming XP tracker (for screen share/streaming in Discord voice channels)
+  // NOTE: This is separate from external platform monitoring (Twitch/YouTube/Kick via StreamMonitor)
   startStreamingTracker(client);
 
   // Initialize live monitoring system

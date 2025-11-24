@@ -31,6 +31,7 @@ NC='\033[0m' # No Color
 BACKGROUND_MODE=false
 PRODUCTION_MODE=false
 SKIP_DB_CHECK=false
+USE_TMUX=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -43,6 +44,10 @@ while [[ $# -gt 0 ]]; do
       PRODUCTION_MODE=true
       shift
       ;;
+    --tmux|-t)
+      USE_TMUX=true
+      shift
+      ;;
     --skip-db-check)
       SKIP_DB_CHECK=true
       shift
@@ -53,7 +58,8 @@ while [[ $# -gt 0 ]]; do
       echo "Usage: $0 [options]"
       echo ""
       echo "Options:"
-      echo "  -b, --background      Run bot in background"
+      echo "  -b, --background      Run bot in background (PM2/nohup)"
+      echo "  -t, --tmux            Run bot in tmux session"
       echo "  -p, --production      Run in production mode"
       echo "  --skip-db-check       Skip database connectivity check"
       echo "  -h, --help            Show this help message"
@@ -189,6 +195,49 @@ fi
 # Start the bot
 echo -e "${BLUE}[7/7]${NC} Starting TeraBot..."
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# Check if tmux mode is requested
+if [ "$USE_TMUX" = true ]; then
+    # Check if tmux is installed
+    if ! command -v tmux &> /dev/null; then
+        echo -e "${RED}ERROR: tmux is not installed!${NC}"
+        echo "Install it with: sudo apt install tmux"
+        exit 1
+    fi
+    
+    # Check if session already exists
+    if tmux has-session -t terabot 2>/dev/null; then
+        echo -e "${YELLOW}tmux session 'terabot' already exists${NC}"
+        echo "  Attach to it: tmux attach -t terabot"
+        echo "  Or kill it:   tmux kill-session -t terabot"
+        exit 1
+    fi
+    
+    # Determine command based on mode
+    if [ "$PRODUCTION_MODE" = true ]; then
+        export NODE_ENV=production
+        CMD="npm run start"
+        SESSION_NAME="terabot"
+    else
+        export NODE_ENV=development
+        CMD="npm run dev"
+        SESSION_NAME="terabot"
+    fi
+    
+    echo -e "${GREEN}Starting in tmux session '${SESSION_NAME}'...${NC}"
+    tmux new-session -d -s "$SESSION_NAME" "$CMD"
+    
+    echo ""
+    echo -e "${GREEN}✓ Bot started in tmux session!${NC}"
+    echo ""
+    echo "  Attach to session:  ${CYAN}tmux attach -t $SESSION_NAME${NC}"
+    echo "  Detach from tmux:   ${CYAN}Ctrl+B then D${NC}"
+    echo "  View sessions:      ${CYAN}tmux ls${NC}"
+    echo "  Kill session:       ${CYAN}tmux kill-session -t $SESSION_NAME${NC}"
+    echo ""
+    
+    exit 0
+fi
 
 if [ "$PRODUCTION_MODE" = true ]; then
     export NODE_ENV=production
