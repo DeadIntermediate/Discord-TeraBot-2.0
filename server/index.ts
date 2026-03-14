@@ -48,8 +48,8 @@ app.use((req, res, next) => {
   displayValidationResults(envValidation);
   
   if (!envValidation.isValid) {
-    console.error('❌ CRITICAL ERROR: Environment validation failed!');
-    console.error('🔧 Please fix the above environment variable issues and restart.\n');
+    error('❌ CRITICAL ERROR: Environment validation failed!');
+    error('🔧 Please fix the above environment variable issues and restart.\n');
     process.exit(1);
   }
   

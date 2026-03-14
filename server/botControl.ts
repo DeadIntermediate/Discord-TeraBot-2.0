@@ -1,5 +1,5 @@
 import { log } from "./vite";
-import { initializeBot, client } from "./bot";
+import { initializeBot, stopBot } from "./bot";
 import { testDatabaseConnection } from "./db";
 
 class BotController {
@@ -53,7 +53,7 @@ class BotController {
 
     try {
       log("Stopping Discord bot...");
-      client.destroy();
+      stopBot();
       
       this.botStatus = "stopped";
       log("Bot stopped");

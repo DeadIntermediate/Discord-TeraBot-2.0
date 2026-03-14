@@ -1,4 +1,4 @@
-import { Client, Events } from 'discord.js';
+import { Client } from 'discord.js';
 import { storage } from '../../storage';
 import { pool } from '../../db';
 import { info, debug, warn, error } from '../../utils/logger';

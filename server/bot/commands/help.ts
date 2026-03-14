@@ -1,4 +1,5 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } from 'discord.js'
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } from 'discord.js';
+import { error } from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('help')
@@ -228,7 +229,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     })
 
   } catch (error) {
-    console.error('Error executing help command:', error)
+    error('Error executing help command:', error);
     await interaction.reply({ 
       content: 'An error occurred while displaying the help menu.', 
       ephemeral: true 

@@ -1,13 +1,13 @@
-import { 
-  users, discordServers, discordUsers, serverMembers, 
-  moderationLogs, tickets, giveaways, roleReactions,
+import {
+  users, discordServers, discordUsers, serverMembers,
+  moderationLogs, tickets, giveaways, roleReactions, savedEmbeds,
   type User, type InsertUser, type DiscordServer, type InsertDiscordServer,
   type DiscordUser, type InsertDiscordUser, type ServerMember, type InsertServerMember,
   type ModerationLog, type InsertModerationLog, type Ticket, type InsertTicket,
   type Giveaway, type InsertGiveaway, type RoleReaction, type InsertRoleReaction
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, and, desc, asc } from "drizzle-orm";
+import { db, pool } from "./db";
+import { eq, and, desc, asc, lte, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -31,7 +31,7 @@ export interface IStorage {
   createServerMember(member: InsertServerMember): Promise<ServerMember>;
   updateServerMember(serverId: string, userId: string, updates: Partial<ServerMember>): Promise<ServerMember | undefined>;
   getServerMembers(serverId: string): Promise<ServerMember[]>;
-  getTopMembersByXP(serverId: string, limit?: number): Promise<ServerMember[]>;
+  getTopMembersByXP(serverId: string, limit?: number, type?: 'total' | 'text' | 'voice'): Promise<ServerMember[]>;
 
   // Moderation methods
   createModerationLog(log: InsertModerationLog): Promise<ModerationLog>;
@@ -49,7 +49,10 @@ export interface IStorage {
   getGiveaway(id: string): Promise<Giveaway | undefined>;
   updateGiveaway(id: string, updates: Partial<Giveaway>): Promise<Giveaway | undefined>;
   getActiveGiveaways(serverId?: string): Promise<Giveaway[]>;
+  getEndedGiveaways(serverId?: string): Promise<Giveaway[]>;
   getExpiredGiveaways(): Promise<Giveaway[]>;
+  // Atomically adds userId to entries; returns null if already entered or giveaway inactive
+  enterGiveaway(giveawayId: string, userId: string): Promise<Giveaway | null>;
 
   // Role Reaction methods
   createRoleReaction(roleReaction: InsertRoleReaction): Promise<RoleReaction>;
@@ -58,6 +61,8 @@ export interface IStorage {
   deleteRoleReaction(id: string): Promise<boolean>;
   // Embed templates
   createSavedEmbed(embed: { serverId: string; name: string; embedData: any; createdBy: string; }): Promise<any>;
+  // Jail recovery
+  getActiveFutureJails(): Promise<ModerationLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -143,10 +148,16 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(serverMembers).where(eq(serverMembers.serverId, serverId));
   }
 
-  async getTopMembersByXP(serverId: string, limit: number = 10): Promise<ServerMember[]> {
+  async getTopMembersByXP(serverId: string, limit: number = 10, type: 'total' | 'text' | 'voice' = 'total'): Promise<ServerMember[]> {
+    const orderExpr = type === 'text'
+      ? desc(serverMembers.textXp)
+      : type === 'voice'
+        ? desc(serverMembers.voiceXp)
+        : desc(sql<number>`coalesce(${serverMembers.textXp}, 0) + coalesce(${serverMembers.voiceXp}, 0)`);
+
     return await db.select().from(serverMembers)
       .where(eq(serverMembers.serverId, serverId))
-      .orderBy(desc(serverMembers.xp))
+      .orderBy(orderExpr)
       .limit(limit);
   }
 
@@ -164,15 +175,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserModerationHistory(userId: string, serverId?: string): Promise<ModerationLog[]> {
-    const query = db.select().from(moderationLogs)
-      .where(eq(moderationLogs.targetUserId, userId))
+    const conditions = [eq(moderationLogs.targetUserId, userId)];
+    if (serverId) conditions.push(eq(moderationLogs.serverId, serverId));
+    return await db.select().from(moderationLogs)
+      .where(and(...conditions))
       .orderBy(desc(moderationLogs.createdAt));
-    
-    if (serverId) {
-      return await (query as any).where(and(eq(moderationLogs.targetUserId, userId), eq(moderationLogs.serverId, serverId)));
-    }
-    
-    return await (query as any);
   }
 
   // Ticket methods
@@ -195,13 +202,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getServerTickets(serverId: string, status?: string): Promise<Ticket[]> {
-    const query = db.select().from(tickets).where(eq(tickets.serverId, serverId));
-    
-    if (status) {
-      return await (query as any).where(and(eq(tickets.serverId, serverId), eq(tickets.status, status)));
-    }
-    
-    return await (query as any).orderBy(desc(tickets.createdAt));
+    const conditions = [eq(tickets.serverId, serverId)];
+    if (status) conditions.push(eq(tickets.status, status));
+    return await db.select().from(tickets)
+      .where(and(...conditions))
+      .orderBy(desc(tickets.createdAt));
   }
 
   // Giveaway methods
@@ -224,21 +229,69 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveGiveaways(serverId?: string): Promise<Giveaway[]> {
-    const query = db.select().from(giveaways)
-      .where(eq(giveaways.isActive, true))
+    const conditions = [eq(giveaways.isActive, true)];
+    if (serverId) conditions.push(eq(giveaways.serverId, serverId));
+    return await db.select().from(giveaways)
+      .where(and(...conditions))
       .orderBy(asc(giveaways.endsAt));
-    
-    if (serverId) {
-      return await (query as any).where(and(eq(giveaways.isActive, true), eq(giveaways.serverId, serverId)));
-    }
-    
-    return await (query as any);
+  }
+
+  async getEndedGiveaways(serverId?: string): Promise<Giveaway[]> {
+    const conditions = [eq(giveaways.isActive, false)];
+    if (serverId) conditions.push(eq(giveaways.serverId, serverId));
+    return await db.select().from(giveaways)
+      .where(and(...conditions))
+      .orderBy(desc(giveaways.endsAt))
+      .limit(50);
+  }
+
+  async enterGiveaway(giveawayId: string, userId: string): Promise<Giveaway | null> {
+    // Atomic: append userId only if giveaway is active and userId not already present.
+    // The JSONB @> operator checks containment, preventing duplicate entries without a
+    // read-modify-write cycle that would be vulnerable to race conditions.
+    const [updated] = await db.update(giveaways)
+      .set({ entries: sql`entries || ${JSON.stringify([userId])}::jsonb` })
+      .where(and(
+        eq(giveaways.id, giveawayId),
+        eq(giveaways.isActive, true),
+        sql`NOT (entries @> ${JSON.stringify([userId])}::jsonb)`,
+      ))
+      .returning();
+    return updated ?? null;
   }
 
   async getExpiredGiveaways(): Promise<Giveaway[]> {
     return await db.select().from(giveaways)
-      .where(and(eq(giveaways.isActive, true), eq(giveaways.endsAt, new Date())))
+      .where(and(eq(giveaways.isActive, true), lte(giveaways.endsAt, new Date())))
       .orderBy(asc(giveaways.endsAt));
+  }
+
+  async getActiveFutureJails(): Promise<ModerationLog[]> {
+    const result = await pool.query(`
+      SELECT ml.* FROM moderation_logs ml
+      WHERE ml.action = 'jail'
+        AND ml.expires_at > NOW()
+        AND NOT EXISTS (
+          SELECT 1 FROM moderation_logs ml2
+          WHERE ml2.action = 'unjail'
+            AND ml2.target_user_id = ml.target_user_id
+            AND ml2.server_id = ml.server_id
+            AND ml2.created_at > ml.created_at
+        )
+    `);
+    return result.rows.map((row: any) => ({
+      id: row.id,
+      serverId: row.server_id,
+      moderatorId: row.moderator_id,
+      targetUserId: row.target_user_id,
+      action: row.action,
+      reason: row.reason,
+      duration: row.duration,
+      channelId: row.channel_id,
+      messageId: row.message_id,
+      expiresAt: row.expires_at,
+      createdAt: row.created_at,
+    }));
   }
 
   // Role Reaction methods
@@ -262,10 +315,9 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
-  // Embed templates (placeholder implementation)
   async createSavedEmbed(embed: { serverId: string; name: string; embedData: any; createdBy: string; }): Promise<any> {
-    // Placeholder: store nothing; return the provided object with an id and createdAt
-    return { id: `embed_${Date.now()}`, ...embed, createdAt: new Date() };
+    const [created] = await db.insert(savedEmbeds).values(embed).returning();
+    return created;
   }
 }
 

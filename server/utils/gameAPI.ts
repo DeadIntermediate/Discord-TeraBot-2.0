@@ -81,6 +81,8 @@ export interface GameScreenshot {
   is_deleted: boolean;
 }
 
+import { error as logError, warn } from './logger';
+
 class GameAPIService {
   private readonly RAWG_BASE_URL = 'https://api.rawg.io/api';
   private readonly RAWG_API_KEY: string;
@@ -99,8 +101,8 @@ class GameAPIService {
     // Require RAWG API key for live lookups. No mock fallback in this bot.
     this.missingApiKey = !this.RAWG_API_KEY;
     if (this.missingApiKey) {
-      console.error('❌ RAWG API key is missing. This bot requires RAWG_API_KEY in the environment for live game lookups.');
-      console.error('💡 Get a free API key at: https://rawg.io/apidocs');
+      logError('❌ RAWG API key is missing. This bot requires RAWG_API_KEY in the environment for live game lookups.');
+      logError('💡 Get a free API key at: https://rawg.io/apidocs');
     }
   }
 
@@ -146,7 +148,7 @@ class GameAPIService {
       this.setCachedData(cacheKey, data);
       return data;
     } catch (error) {
-      console.error('Error searching games:', error);
+      logError('Error searching games:', error);
       throw error;
     }
   }
@@ -181,7 +183,7 @@ class GameAPIService {
       this.setCachedData(cacheKey, data);
       return data;
     } catch (error) {
-      console.error(`Error getting game details for ID ${gameId}:`, error);
+      logError(`Error getting game details for ID ${gameId}:`, error);
       return null;
     }
   }
@@ -214,7 +216,7 @@ class GameAPIService {
       this.setCachedData(cacheKey, screenshots);
       return screenshots;
     } catch (error) {
-      console.error(`Error getting screenshots for game ID ${gameId}:`, error);
+      logError(`Error getting screenshots for game ID ${gameId}:`, error);
       return [];
     }
   }
@@ -253,7 +255,7 @@ class GameAPIService {
       this.setCachedData(cacheKey, games);
       return games;
     } catch (error) {
-      console.error('Error getting random games:', error);
+      logError('Error getting random games:', error);
       return [];
     }
   }
@@ -292,7 +294,7 @@ class GameAPIService {
       this.setCachedData(cacheKey, games);
       return games;
     } catch (error) {
-      console.error('Error getting trending games:', error);
+      logError('Error getting trending games:', error);
       return [];
     }
   }

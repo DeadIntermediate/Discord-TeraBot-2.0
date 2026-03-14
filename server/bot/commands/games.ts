@@ -11,6 +11,7 @@ import {
   , ButtonInteraction
 } from 'discord.js';
 import { gameAPI, GameData, GameScreenshot } from '../../utils/gameAPI';
+import { error } from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('game')
@@ -163,7 +164,7 @@ async function handleSearch(interaction: ChatInputCommandInteraction) {
       });
     }
   } catch (error) {
-    console.error('Error in game search:', error);
+    error('Error in game search:', error);
     await interaction.editReply({
       content: '❌ An error occurred while searching for games. Please try again later.'
     });
@@ -189,7 +190,7 @@ async function handleInfo(interaction: ChatInputCommandInteraction) {
     const game = searchResults.results[0];
     await showGameDetails(interaction, game);
   } catch (error) {
-    console.error('Error getting game info:', error);
+    error('Error getting game info:', error);
     await interaction.editReply({
       content: '❌ An error occurred while fetching game information. Please try again later.'
     });
@@ -216,7 +217,7 @@ async function handleRandom(interaction: ChatInputCommandInteraction) {
       await showGameList(interaction, randomGames, '🎲 Random Games');
     }
   } catch (error) {
-    console.error('Error getting random games:', error);
+    error('Error getting random games:', error);
     await interaction.editReply({
       content: '❌ An error occurred while fetching random games. Please try again later.'
     });
@@ -239,7 +240,7 @@ async function handleTrending(interaction: ChatInputCommandInteraction) {
 
     await showGameList(interaction, trendingGames, '🔥 Trending Games');
   } catch (error) {
-    console.error('Error getting trending games:', error);
+    error('Error getting trending games:', error);
     await interaction.editReply({
       content: '❌ An error occurred while fetching trending games. Please try again later.'
     });
@@ -416,7 +417,7 @@ async function showGameDetails(interaction: ChatInputCommandInteraction, game: G
       });
     }
   } catch (error) {
-    console.error('Error showing game details:', error);
+    error('Error showing game details:', error);
     const errorMessage = '❌ An error occurred while displaying game details.';
     
     if (isUpdate) {

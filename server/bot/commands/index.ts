@@ -8,8 +8,10 @@ import * as streamsCommand from './streams'
 import * as gamesCommand from './games'
 import * as gamehelpCommand from './gamehelp'
 import * as gamedemoCommand from './gamedemo'
-// CAH commands removed
 import * as helpCommand from './help'
+import { ttsCommand } from './tts'
+import { contextMenuCommands } from './contextMenus'
+import { panelCommand } from './panels'
 
 export const commands = [
   ...moderationCommands,
@@ -18,10 +20,12 @@ export const commands = [
   ...giveawayCommands,
   ...embedCommands,
   ...roleReactionCommands,
+  ...contextMenuCommands,
+  panelCommand,
   streamsCommand,
   gamesCommand,
   gamehelpCommand,
   gamedemoCommand,
-  // CAH commands removed
   helpCommand,
+  ttsCommand,
 ]

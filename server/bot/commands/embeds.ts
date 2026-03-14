@@ -19,6 +19,7 @@ import {
   ColorResolvable
 } from 'discord.js';
 import { storage } from '../../storage';
+import { error } from '../../utils/logger';
 
 const embedCommand = {
   data: new SlashCommandBuilder()
@@ -111,7 +112,7 @@ const embedCommand = {
           break;
       }
     } catch (error) {
-      console.error(`Error in embed ${subcommand}:`, error);
+      error(`Error in embed ${subcommand}:`, error);
       await interaction.reply({
         content: 'An error occurred while processing your request.',
         ephemeral: true

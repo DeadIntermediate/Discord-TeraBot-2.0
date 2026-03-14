@@ -17,6 +17,7 @@ import {
   PartialUser
 } from 'discord.js';
 import { storage } from '../../storage';
+import { error } from '../../utils/logger';
 
 const roleReactionCommand = {
   data: new SlashCommandBuilder()
@@ -119,7 +120,7 @@ const roleReactionCommand = {
           break;
       }
     } catch (error) {
-      console.error(`Error in rolereaction ${subcommand}:`, error);
+      error(`Error in rolereaction ${subcommand}:`, error);
       await interaction.reply({
         content: 'An error occurred while processing your request.',
         ephemeral: true
@@ -246,7 +247,7 @@ async function handleAddRoleReaction(interaction: ChatInputCommandInteraction) {
     });
 
   } catch (error) {
-    console.error('Error adding role reaction:', error);
+    error('Error adding role reaction:', error);
     await interaction.reply({
       content: 'Failed to add role reaction. Make sure the emoji is valid and accessible.',
       ephemeral: true
@@ -294,7 +295,7 @@ async function handleRemoveRoleReaction(interaction: ChatInputCommandInteraction
     });
 
   } catch (error) {
-    console.error('Error removing role reaction:', error);
+    error('Error removing role reaction:', error);
     await interaction.reply({
       content: 'Failed to remove role reaction.',
       ephemeral: true
@@ -411,7 +412,7 @@ async function handleCreateTemplate(interaction: ChatInputCommandInteraction) {
     });
 
   } catch (error) {
-    console.error('Error creating template:', error);
+    error('Error creating template:', error);
     await interaction.reply({
       content: 'Failed to create template.',
       ephemeral: true
@@ -446,7 +447,7 @@ export async function handleReactionAdd(reaction: MessageReaction | PartialMessa
     const role = guild.roles.cache.get(roleReaction.roleId);
 
     if (!role) {
-      console.error(`Role ${roleReaction.roleId} not found for reaction ${roleReaction.emoji}`);
+      error(`Role ${roleReaction.roleId} not found for reaction ${roleReaction.emoji}`);
       return;
     }
 
@@ -472,7 +473,7 @@ export async function handleReactionAdd(reaction: MessageReaction | PartialMessa
     }
 
   } catch (error) {
-    console.error('Error handling reaction add:', error);
+    error('Error handling reaction add:', error);
   }
 }
 
@@ -502,7 +503,7 @@ export async function handleReactionRemove(reaction: MessageReaction | PartialMe
     const role = guild.roles.cache.get(roleReaction.roleId);
 
     if (!role) {
-      console.error(`Role ${roleReaction.roleId} not found for reaction ${roleReaction.emoji}`);
+      error(`Role ${roleReaction.roleId} not found for reaction ${roleReaction.emoji}`);
       return;
     }
 
@@ -528,7 +529,7 @@ export async function handleReactionRemove(reaction: MessageReaction | PartialMe
     }
 
   } catch (error) {
-    console.error('Error handling reaction remove:', error);
+    error('Error handling reaction remove:', error);
   }
 }
 

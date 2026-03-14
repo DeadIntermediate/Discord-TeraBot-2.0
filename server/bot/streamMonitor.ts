@@ -3,6 +3,8 @@ import { db } from '../db';
 import { streamNotifications } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
 import { info, debug, error } from '../utils/logger';
+import { TwitchAPI } from '../utils/twitchAPI';
+import { YouTubeAPI } from '../utils/youtubeAPI';
 
 // Note: To use this properly, you'll need to set up API credentials for each platform
 // For now, this is a basic structure. You'll need to:
@@ -23,6 +25,8 @@ export class StreamMonitor {
   private client: Client;
   private checkInterval: NodeJS.Timeout | null = null;
   private readonly CHECK_INTERVAL_MS = 5 * 60 * 1000; // Check every 5 minutes
+  private readonly twitch = new TwitchAPI();
+  private readonly youtube = new YouTubeAPI();
 
   constructor(client: Client) {
     this.client = client;
@@ -237,32 +241,16 @@ export class StreamMonitor {
   }
 
   private async checkTwitch(username: string): Promise<StreamData | null> {
-    // TODO: Implement Twitch API check
-    // You'll need to:
-    // 1. Register app at https://dev.twitch.tv/
-    // 2. Get Client ID and Secret
-    // 3. Use Twitch Helix API: GET https://api.twitch.tv/helix/streams?user_login={username}
-    
-    debug(`[Twitch] Checking ${username} (API not implemented)`);
-    return null;
+    debug(`[Twitch] Checking ${username}`);
+    return this.twitch.getStreamData(username);
   }
 
-  private async checkYouTube(username: string): Promise<StreamData | null> {
-    // TODO: Implement YouTube API check
-    // You'll need to:
-    // 1. Create project in Google Cloud Console
-    // 2. Enable YouTube Data API v3
-    // 3. Get API key
-    // 4. Use endpoint: GET https://www.googleapis.com/youtube/v3/search?part=snippet&channelId={channelId}&eventType=live&type=video
-    
-    debug(`[YouTube] Checking ${username} (API not implemented)`);
-    return null;
+  private async checkYouTube(channelId: string): Promise<StreamData | null> {
+    debug(`[YouTube] Checking ${channelId}`);
+    return this.youtube.getStreamData(channelId);
   }
 
   private async checkKick(username: string): Promise<StreamData | null> {
-    // TODO: Implement Kick API check
-    // Kick has a public API: GET https://kick.com/api/v2/channels/{username}
-    
     try {
       const response = await fetch(`https://kick.com/api/v2/channels/${username}`);
       if (!response.ok) {

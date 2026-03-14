@@ -1,16 +1,18 @@
-import { 
-  SlashCommandBuilder, 
-  ChatInputCommandInteraction, 
-  PermissionFlagsBits, 
+import {
+  SlashCommandBuilder,
+  ChatInputCommandInteraction,
+  AutocompleteInteraction,
+  PermissionFlagsBits,
   EmbedBuilder,
   ChannelType,
   TextChannel,
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
-  ComponentType
+  AttachmentBuilder,
 } from 'discord.js';
 import { storage } from '../../storage';
+import { error } from '../../utils/logger';
 
 const createTicketCommand = {
   data: new SlashCommandBuilder()
@@ -53,22 +55,22 @@ const createTicketCommand = {
       const userHasOpenTicket = existingTickets.some(ticket => ticket.userId === interaction.user.id);
 
       if (userHasOpenTicket) {
-        await interaction.reply({ 
-          content: 'You already have an open ticket. Please close your existing ticket before creating a new one.', 
-          ephemeral: true 
+        await interaction.reply({
+          content: 'You already have an open ticket. Please close your existing ticket before creating a new one.',
+          ephemeral: true
         });
         return;
       }
 
       // Get server settings for ticket category
       const server = await storage.getDiscordServer(interaction.guild.id);
-  const ticketCategoryId = (server as any)?.settings?.ticketCategoryId;
+      const ticketCategoryId = (server as any)?.settings?.ticketCategoryId;
 
       let ticketChannel: TextChannel;
-      
+
       // Create ticket channel
       const channelName = `ticket-${interaction.user.username}-${Date.now().toString().slice(-4)}`;
-      
+
       ticketChannel = await interaction.guild.channels.create({
         name: channelName,
         type: ChannelType.GuildText,
@@ -100,7 +102,7 @@ const createTicketCommand = {
       });
 
       // Add support role permissions if configured
-  const supportRoleId = (server as any)?.settings?.supportRoleId;
+      const supportRoleId = (server as any)?.settings?.supportRoleId;
       if (supportRoleId) {
         await ticketChannel.permissionOverwrites.create(supportRoleId, {
           ViewChannel: true,
@@ -121,10 +123,10 @@ const createTicketCommand = {
 
       // Create ticket embed
       const priorityColors = {
-        low: 0x00ff00,     // Green
-        medium: 0xffff00,  // Yellow
-        high: 0xff8800,    // Orange
-        urgent: 0xff0000,  // Red
+        low: 0x00ff00,
+        medium: 0xffff00,
+        high: 0xff8800,
+        urgent: 0xff0000,
       };
 
       const ticketEmbed = new EmbedBuilder()
@@ -195,8 +197,8 @@ const createTicketCommand = {
         }
       }
 
-    } catch (error) {
-      console.error('Error creating ticket:', error);
+    } catch (err) {
+      error('Error creating ticket:', err);
       await interaction.reply({
         content: 'An error occurred while creating your ticket. Please try again or contact an administrator.',
         ephemeral: true
@@ -217,7 +219,8 @@ const ticketManageCommand = {
         .addStringOption(option =>
           option.setName('ticket-id')
             .setDescription('Ticket ID to close')
-            .setRequired(false))
+            .setRequired(false)
+            .setAutocomplete(true))
         .addStringOption(option =>
           option.setName('reason')
             .setDescription('Reason for closing the ticket')
@@ -233,7 +236,8 @@ const ticketManageCommand = {
         .addStringOption(option =>
           option.setName('ticket-id')
             .setDescription('Ticket ID to assign')
-            .setRequired(false)))
+            .setRequired(false)
+            .setAutocomplete(true)))
     .addSubcommand(subcommand =>
       subcommand
         .setName('list')
@@ -254,7 +258,8 @@ const ticketManageCommand = {
         .addStringOption(option =>
           option.setName('ticket-id')
             .setDescription('Ticket ID to generate transcript for')
-            .setRequired(false))),
+            .setRequired(false)
+            .setAutocomplete(true))),
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
@@ -279,8 +284,8 @@ const ticketManageCommand = {
           await handleTicketTranscript(interaction);
           break;
       }
-    } catch (error) {
-      console.error(`Error in ticket-manage ${subcommand}:`, error);
+    } catch (err) {
+      error(`Error in ticket-manage ${subcommand}:`, err);
       await interaction.reply({
         content: 'An error occurred while processing your request.',
         ephemeral: true
@@ -339,8 +344,8 @@ async function handleCloseTicket(interaction: ChatInputCommandInteraction) {
       if (channel) {
         await channel.delete('Ticket closed');
       }
-    } catch (error) {
-      console.error('Error deleting ticket channel:', error);
+    } catch (err) {
+      error('Error deleting ticket channel:', err);
     }
   }, 10000);
 }
@@ -378,7 +383,7 @@ async function handleAssignTicket(interaction: ChatInputCommandInteraction) {
 async function handleListTickets(interaction: ChatInputCommandInteraction) {
   const status = interaction.options.getString('status') || 'open';
 
-  const tickets = status === 'all' 
+  const tickets = status === 'all'
     ? await storage.getServerTickets(interaction.guild!.id)
     : await storage.getServerTickets(interaction.guild!.id, status);
 
@@ -394,8 +399,8 @@ async function handleListTickets(interaction: ChatInputCommandInteraction) {
       medium: '🟡',
       high: '🟠',
       urgent: '🔴'
-  }[String(ticket.priority) || 'normal'] || '⚪';
-    
+    }[String(ticket.priority) || 'normal'] || '⚪';
+
     return `${statusEmoji} **${ticket.subject}** | ${priorityEmoji} ${ticket.priority} | <#${ticket.channelId}> | \`${ticket.id.slice(-8)}\``;
   }).join('\n');
 
@@ -410,8 +415,96 @@ async function handleListTickets(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleTicketTranscript(interaction: ChatInputCommandInteraction) {
-  await interaction.reply({ content: 'Transcript generation is not yet implemented.', ephemeral: true });
-  // TODO: Implement transcript generation
+  await interaction.deferReply({ ephemeral: true });
+
+  const ticketId = interaction.options.getString('ticket-id');
+
+  let ticket;
+  if (ticketId) {
+    ticket = await storage.getTicket(ticketId);
+  } else {
+    // Try to resolve from current channel
+    const channelTickets = await storage.getServerTickets(interaction.guild!.id);
+    ticket = channelTickets.find(t => t.channelId === interaction.channel?.id);
+  }
+
+  if (!ticket) {
+    await interaction.editReply({ content: 'Ticket not found. Provide a ticket ID or run this command inside a ticket channel.' });
+    return;
+  }
+
+  // Fetch the ticket channel's messages (up to 100)
+  const ticketChannel = interaction.guild!.channels.cache.get(ticket.channelId) as TextChannel | undefined;
+  if (!ticketChannel) {
+    await interaction.editReply({ content: 'Ticket channel not found — it may have already been deleted.' });
+    return;
+  }
+
+  const messages = await ticketChannel.messages.fetch({ limit: 100 });
+  const sorted = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+
+  // Build plain-text transcript
+  const lines: string[] = [
+    `=== Ticket Transcript ===`,
+    `Ticket ID : ${ticket.id}`,
+    `Subject   : ${ticket.subject}`,
+    `Priority  : ${ticket.priority}`,
+    `Status    : ${ticket.status}`,
+    `Created   : ${ticket.createdAt ? new Date(ticket.createdAt).toUTCString() : 'Unknown'}`,
+    `Server    : ${interaction.guild!.name}`,
+    ``,
+    `--- Messages (${sorted.length}) ---`,
+    ``,
+  ];
+
+  for (const msg of sorted) {
+    const timestamp = new Date(msg.createdTimestamp).toUTCString();
+    const author = `${msg.author.username}#${msg.author.discriminator}`;
+    const content = msg.content || (msg.embeds.length > 0 ? '[Embed]' : '[No content]');
+    lines.push(`[${timestamp}] ${author}: ${content}`);
+
+    for (const attachment of msg.attachments.values()) {
+      lines.push(`  [Attachment] ${attachment.name}: ${attachment.url}`);
+    }
+  }
+
+  if (sorted.length === 100) {
+    lines.push('');
+    lines.push('(Only the most recent 100 messages are included in this transcript.)');
+  }
+
+  const transcriptText = lines.join('\n');
+  const buffer = Buffer.from(transcriptText, 'utf-8');
+  const attachment = new AttachmentBuilder(buffer, {
+    name: `transcript-${ticket.id.slice(-8)}.txt`,
+    description: `Transcript for ticket ${ticket.id.slice(-8)}`
+  });
+
+  await interaction.editReply({
+    content: `📄 Transcript for ticket \`${ticket.id.slice(-8)}\` (${sorted.length} messages):`,
+    files: [attachment]
+  });
+}
+
+export async function handleTicketAutocomplete(interaction: AutocompleteInteraction): Promise<void> {
+  if (!interaction.guild) { await interaction.respond([]); return; }
+  const focused = interaction.options.getFocused().toLowerCase();
+
+  try {
+    const tickets = await storage.getServerTickets(interaction.guild.id, 'open');
+    const choices = tickets
+      .filter(t => t.subject.toLowerCase().includes(focused) || t.id.includes(focused))
+      .slice(0, 25)
+      .map(t => ({
+        name: `#${t.id.slice(-8)} — ${t.subject}`,
+        value: t.id
+      }));
+
+    await interaction.respond(choices);
+  } catch (err) {
+    error('Error in ticket autocomplete:', err);
+    await interaction.respond([]);
+  }
 }
 
 export const ticketCommands = [createTicketCommand, ticketManageCommand];

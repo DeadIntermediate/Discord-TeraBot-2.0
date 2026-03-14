@@ -1,5 +1,6 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
+import { Client, SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 import { storage } from '../../storage';
+import { info, error } from '../../utils/logger';
 
 const kickCommand = {
   data: new SlashCommandBuilder()
@@ -56,7 +57,7 @@ const kickCommand = {
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
-      console.error('Error kicking user:', error);
+      error('Error kicking user:', error);
       await interaction.reply({ content: 'An error occurred while kicking the user.', ephemeral: true });
     }
   },
@@ -120,7 +121,7 @@ const banCommand = {
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
-      console.error('Error banning user:', error);
+      error('Error banning user:', error);
       await interaction.reply({ content: 'An error occurred while banning the user.', ephemeral: true });
     }
   },
@@ -192,7 +193,7 @@ const muteCommand = {
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
-      console.error('Error timing out user:', error);
+      error('Error timing out user:', error);
       await interaction.reply({ content: 'An error occurred while timing out the user.', ephemeral: true });
     }
   },
@@ -238,7 +239,7 @@ const clearCommand = {
         ephemeral: true 
       });
     } catch (error) {
-      console.error('Error clearing messages:', error);
+      error('Error clearing messages:', error);
       await interaction.reply({ 
         content: 'An error occurred while clearing messages.', 
         ephemeral: true 
@@ -350,28 +351,18 @@ const jailCommand = {
 
       // Schedule unjail if duration is set
       if (duration && expiresAt) {
-        setTimeout(async () => {
-          try {
-            const currentMember = await interaction.guild!.members.fetch(user.id);
-            await currentMember.roles.remove(jailRole, 'Jail duration expired');
-            
-            // Log the automatic unjail
-            await storage.createModerationLog({
-              serverId: interaction.guild!.id,
-              moderatorId: interaction.client.user.id,
-              targetUserId: user.id,
-              action: 'unjail',
-              reason: 'Jail duration expired (automatic)',
-              channelId: interaction.channel?.id,
-            });
-          } catch (error) {
-            console.error('Error auto-unjailing user:', error);
-          }
-        }, duration * 60000);
+        scheduleAutoUnjail(
+          interaction.client,
+          interaction.guild.id,
+          user.id,
+          jailRoleId,
+          duration * 60000,
+          interaction.channel?.id,
+        );
       }
 
     } catch (error) {
-      console.error('Error jailing user:', error);
+      error('Error jailing user:', error);
       await interaction.reply({ content: 'An error occurred while jailing the user.', ephemeral: true });
     }
   },
@@ -458,7 +449,7 @@ const unjailCommand = {
       await interaction.reply({ embeds: [embed] });
 
     } catch (error) {
-      console.error('Error unjailing user:', error);
+      error('Error unjailing user:', error);
       await interaction.reply({ content: 'An error occurred while unjailing the user.', ephemeral: true });
     }
   },
@@ -528,7 +519,7 @@ const warnCommand = {
       }
 
     } catch (error) {
-      console.error('Error warning user:', error);
+      error('Error warning user:', error);
       await interaction.reply({ content: 'An error occurred while warning the user.', ephemeral: true });
     }
   },
@@ -588,7 +579,7 @@ const modHistoryCommand = {
       await interaction.reply({ embeds: [embed], ephemeral: true });
 
     } catch (error) {
-      console.error('Error fetching moderation history:', error);
+      error('Error fetching moderation history:', error);
       await interaction.reply({ 
         content: 'An error occurred while fetching moderation history.', 
         ephemeral: true 
@@ -596,6 +587,57 @@ const modHistoryCommand = {
     }
   },
 };
+
+export function scheduleAutoUnjail(
+  client: Client,
+  guildId: string,
+  userId: string,
+  jailRoleId: string,
+  delayMs: number,
+  channelId?: string,
+) {
+  setTimeout(async () => {
+    try {
+      const guild = await client.guilds.fetch(guildId);
+      const member = await guild.members.fetch(userId);
+      const jailRole = guild.roles.cache.get(jailRoleId);
+      if (!jailRole || !member.roles.cache.has(jailRoleId)) return;
+      await member.roles.remove(jailRole, 'Jail duration expired');
+      await storage.createModerationLog({
+        serverId: guildId,
+        moderatorId: client.user!.id,
+        targetUserId: userId,
+        action: 'unjail',
+        reason: 'Jail duration expired (automatic)',
+        channelId,
+      });
+    } catch (err) {
+      error('Error auto-unjailing user:', err);
+    }
+  }, delayMs);
+}
+
+export async function recoverJails(client: Client): Promise<void> {
+  const activeJails = await storage.getActiveFutureJails();
+  let scheduled = 0;
+
+  for (const jailLog of activeJails) {
+    const server = await storage.getDiscordServer(jailLog.serverId);
+    const jailRoleId = (server as any)?.settings?.jailRoleId;
+    if (!jailRoleId || !jailLog.expiresAt) continue;
+
+    const delayMs = jailLog.expiresAt.getTime() - Date.now();
+    if (delayMs <= 0) {
+      // Already expired — unjail immediately
+      scheduleAutoUnjail(client, jailLog.serverId, jailLog.targetUserId, jailRoleId, 0, jailLog.channelId ?? undefined);
+    } else {
+      scheduleAutoUnjail(client, jailLog.serverId, jailLog.targetUserId, jailRoleId, delayMs, jailLog.channelId ?? undefined);
+    }
+    scheduled++;
+  }
+
+  info(`🔒 Jail recovery: ${scheduled} active jail(s) rescheduled`);
+}
 
 export const moderationCommands = [
   kickCommand,

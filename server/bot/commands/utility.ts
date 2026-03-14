@@ -1,11 +1,13 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ChannelType } from 'discord.js';
 import { storage } from '../../storage';
+import { calculateLevel } from '../../utils/xp';
+import { error } from '../../utils/logger';
 
 const serverInfoCommand = {
   data: new SlashCommandBuilder()
     .setName('serverinfo')
     .setDescription('Display server information'),
-  
+
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
       await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
@@ -13,14 +15,12 @@ const serverInfoCommand = {
     }
 
     const guild = interaction.guild;
-    
+
     try {
-      // Fetch additional guild data
       const owner = await guild.fetchOwner();
       const channels = guild.channels.cache;
       const textChannels = channels.filter(channel => channel.type === ChannelType.GuildText).size;
       const voiceChannels = channels.filter(channel => channel.type === ChannelType.GuildVoice).size;
-      
       const members = guild.members.cache;
       const humanCount = members.filter(member => !member.user.bot).size;
       const botCount = members.filter(member => member.user.bot).size;
@@ -44,8 +44,8 @@ const serverInfoCommand = {
         .setTimestamp();
 
       await interaction.reply({ embeds: [embed] });
-    } catch (error) {
-      console.error('Error fetching server info:', error);
+    } catch (err) {
+      error('Error fetching server info:', err);
       await interaction.reply({ content: 'An error occurred while fetching server information.', ephemeral: true });
     }
   },
@@ -59,7 +59,7 @@ const levelCommand = {
       option.setName('user')
         .setDescription('The user to check')
         .setRequired(false)),
-  
+
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
       await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
@@ -67,76 +67,68 @@ const levelCommand = {
     }
 
     const targetUser = interaction.options.getUser('user') || interaction.user;
-    
+
     try {
       const member = await storage.getServerMember(interaction.guild.id, targetUser.id);
-      
+
       if (!member) {
-        await interaction.reply({ 
-          content: `${targetUser.tag} is not tracked in the leveling system yet.`, 
-          ephemeral: true 
+        await interaction.reply({
+          content: `${targetUser.tag} hasn't earned any XP yet.`,
+          ephemeral: true
         });
         return;
       }
 
-  const level = Number(member.level ?? 0);
-  const xp = Number(member.xp ?? 0);
-  const xpForNextLevel = Math.pow(level + 1, 2) * 100;
-  const xpForCurrentLevel = Math.pow(level, 2) * 100;
-  const xpNeeded = xpForNextLevel - xp;
-  const progressXP = xp - xpForCurrentLevel;
-  const totalXPForLevel = xpForNextLevel - xpForCurrentLevel;
-  const progressPercent = Math.floor((progressXP / Math.max(1, totalXPForLevel)) * 100);
-      
-      // Create visual progress bar for overall XP
-  const barLength = 20;
-  const filledLength = Math.floor((progressXP / Math.max(1, totalXPForLevel)) * barLength);
-  const emptyLength = barLength - filledLength;
-      const progressBar = '🟩'.repeat(filledLength) + '🟥'.repeat(emptyLength)
-      
-      // Text XP progress
-  const textLevel = Number(member.textLevel ?? 0);
-  const textXp = Number(member.textXp ?? 0);
-  const textXpForNextLevel = (textLevel + 1) * 100;
-  const textXpForCurrentLevel = textLevel * 100;
-  const textProgressXP = textXp - textXpForCurrentLevel;
-  const textTotalXP = textXpForNextLevel - textXpForCurrentLevel;
-  const textFilledLength = Math.floor((textProgressXP / Math.max(1, textTotalXP)) * barLength);
-  const textProgressBar = '🟦'.repeat(textFilledLength) + '⬜'.repeat(barLength - textFilledLength);
-  const textProgressPercent = Math.floor((textProgressXP / Math.max(1, textTotalXP)) * 100);
-      
-      // Voice XP progress
-  const voiceLevel = Number(member.voiceLevel ?? 0);
-  const voiceXp = Number(member.voiceXp ?? 0);
-  const voiceXpForNextLevel = (voiceLevel + 1) * 100;
-  const voiceXpForCurrentLevel = voiceLevel * 100;
-  const voiceProgressXP = voiceXp - voiceXpForCurrentLevel;
-  const voiceTotalXP = voiceXpForNextLevel - voiceXpForCurrentLevel;
-  const voiceFilledLength = Math.floor((voiceProgressXP / Math.max(1, voiceTotalXP)) * barLength);
-  const voiceProgressBar = '🟩'.repeat(voiceFilledLength) + '🟥'.repeat(barLength - voiceFilledLength);
-  const voiceProgressPercent = Math.floor((voiceProgressXP / Math.max(1, voiceTotalXP)) * 100);
+      const textXp = Number(member.textXp ?? 0);
+      const voiceXp = Number(member.voiceXp ?? 0);
+      const globalLevel = Number(member.globalLevel ?? 1);
+
+      const textInfo = calculateLevel(textXp);
+      const voiceInfo = calculateLevel(voiceXp);
+
+      const BAR = 20;
+      const textFilled = Math.floor((textInfo.xpInLevel / textInfo.xpForNext) * BAR);
+      const voiceFilled = Math.floor((voiceInfo.xpInLevel / voiceInfo.xpForNext) * BAR);
+
+      const textBar = '🟦'.repeat(textFilled) + '⬜'.repeat(BAR - textFilled);
+      const voiceBar = '🟩'.repeat(voiceFilled) + '⬜'.repeat(BAR - voiceFilled);
+
+      const voiceMinutes = Number(member.voiceTime ?? 0);
+      const voiceHours = Math.floor(voiceMinutes / 60);
+      const voiceRemainingMin = voiceMinutes % 60;
+      const voiceTimeStr = voiceHours > 0
+        ? `${voiceHours}h ${voiceRemainingMin}m`
+        : `${voiceRemainingMin}m`;
 
       const embed = new EmbedBuilder()
         .setColor(0x4caf50)
         .setTitle(`📊 ${targetUser.tag}'s Profile`)
         .setThumbnail(targetUser.displayAvatarURL())
-        .setDescription(`**Global Level ${member.globalLevel}**`)
+        .setDescription(`**Global Level ${globalLevel}**`)
         .addFields(
-          { name: '📝 Text Level', value: `Level ${member.textLevel}`, inline: true },
-          { name: '🎤 Voice Level', value: `Level ${member.voiceLevel}`, inline: true },
-          { name: '📈 Legacy Level', value: `Level ${member.level}`, inline: true },
-          { name: '📝 Text XP Progress', value: `\`${textProgressBar}\` ${textProgressPercent}%\n${textProgressXP}/${textTotalXP} XP`, inline: false },
-          { name: '🎤 Voice XP Progress', value: `\`${voiceProgressBar}\` ${voiceProgressPercent}%\n${voiceProgressXP}/${voiceTotalXP} XP`, inline: false },
-          { name: '💬 Messages Sent', value: String(member.messageCount ?? 0), inline: true },
-          { name: '⏱️ Voice Time', value: `${Math.floor((Number(member.voiceTime ?? 0)) / 60)}h ${Number(member.voiceTime ?? 0) % 60}m`, inline: true },
-          { name: '🎯 Total XP', value: `${xp.toLocaleString()}`, inline: true }
+          { name: '📝 Text Level', value: `Level ${textInfo.level}`, inline: true },
+          { name: '🎤 Voice Level', value: `Level ${voiceInfo.level}`, inline: true },
+          { name: '\u200b', value: '\u200b', inline: true },
+          {
+            name: '📝 Text XP',
+            value: `\`${textBar}\`\n${textInfo.xpInLevel} / ${textInfo.xpForNext} XP to next level`,
+            inline: false
+          },
+          {
+            name: '🎤 Voice XP',
+            value: `\`${voiceBar}\`\n${voiceInfo.xpInLevel} / ${voiceInfo.xpForNext} XP to next level`,
+            inline: false
+          },
+          { name: '💬 Messages', value: String(member.messageCount ?? 0), inline: true },
+          { name: '⏱️ Voice Time', value: voiceTimeStr, inline: true },
+          { name: '🎯 Total XP', value: (textXp + voiceXp).toLocaleString(), inline: true }
         )
         .setFooter({ text: `Requested by ${interaction.user.tag}` })
-        .setTimestamp()
+        .setTimestamp();
 
       await interaction.reply({ embeds: [embed] });
-    } catch (error) {
-      console.error('Error fetching level info:', error);
+    } catch (err) {
+      error('Error fetching level info:', err);
       await interaction.reply({ content: 'An error occurred while fetching level information.', ephemeral: true });
     }
   },
@@ -146,44 +138,61 @@ const leaderboardCommand = {
   data: new SlashCommandBuilder()
     .setName('leaderboard')
     .setDescription('View the server leaderboard')
+    .addStringOption(option =>
+      option.setName('type')
+        .setDescription('Leaderboard type')
+        .setRequired(false)
+        .addChoices(
+          { name: 'Total XP', value: 'total' },
+          { name: 'Text XP', value: 'text' },
+          { name: 'Voice XP', value: 'voice' },
+        ))
     .addIntegerOption(option =>
       option.setName('limit')
         .setDescription('Number of users to show (1-25)')
         .setMinValue(1)
         .setMaxValue(25)
         .setRequired(false)),
-  
+
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
       await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
       return;
     }
 
+    const type = interaction.options.getString('type') || 'total';
     const limit = interaction.options.getInteger('limit') || 10;
-    
+
     try {
-      const topMembers = await storage.getTopMembersByXP(interaction.guild.id, limit);
-      
+      const topMembers = await storage.getTopMembersByXP(interaction.guild.id, limit, type as any);
+
       if (topMembers.length === 0) {
-        await interaction.reply({ content: 'No members found in the leaderboard.', ephemeral: true });
+        await interaction.reply({ content: 'No members found in the leaderboard yet.', ephemeral: true });
         return;
       }
 
+      const typeLabels: Record<string, string> = { total: 'Total XP', text: 'Text XP', voice: 'Voice XP' };
+
       const leaderboardText = topMembers.map((member, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-        return `${medal} <@${member.userId}> - Level ${member.level} (${member.xp} XP)`;
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `**${index + 1}.**`;
+        const textXp = Number(member.textXp ?? 0);
+        const voiceXp = Number(member.voiceXp ?? 0);
+        const totalXp = textXp + voiceXp;
+        const { level } = calculateLevel(type === 'voice' ? voiceXp : type === 'text' ? textXp : totalXp);
+        const xpDisplay = type === 'voice' ? voiceXp : type === 'text' ? textXp : totalXp;
+        return `${medal} <@${member.userId}> — Level ${level} (${xpDisplay.toLocaleString()} XP)`;
       }).join('\n');
 
       const embed = new EmbedBuilder()
         .setColor(0xffd700)
-        .setTitle('🏆 Server Leaderboard')
+        .setTitle(`🏆 Leaderboard — ${typeLabels[type]}`)
         .setDescription(leaderboardText)
-        .setFooter({ text: `Showing top ${topMembers.length} members` })
+        .setFooter({ text: `Top ${topMembers.length} members` })
         .setTimestamp();
 
       await interaction.reply({ embeds: [embed] });
-    } catch (error) {
-      console.error('Error fetching leaderboard:', error);
+    } catch (err) {
+      error('Error fetching leaderboard:', err);
       await interaction.reply({ content: 'An error occurred while fetching the leaderboard.', ephemeral: true });
     }
   },
