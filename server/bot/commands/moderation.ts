@@ -455,6 +455,13 @@ const unjailCommand = {
   },
 };
 
+// ── Warn thresholds ───────────────────────────────────────────────────────────
+// At WARN_MUTE_THRESHOLD warnings → auto-mute for WARN_MUTE_DURATION_MINS minutes
+// At WARN_KICK_THRESHOLD warnings → auto-kick
+const WARN_MUTE_THRESHOLD = 3;
+const WARN_MUTE_DURATION_MINS = 60;
+const WARN_KICK_THRESHOLD = 5;
+
 const warnCommand = {
   data: new SlashCommandBuilder()
     .setName('warn')
@@ -472,15 +479,18 @@ const warnCommand = {
   async execute(interaction: ChatInputCommandInteraction) {
     const user = interaction.options.getUser('user', true);
     const reason = interaction.options.getString('reason', true);
-    
+
     if (!interaction.guild) {
       await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
       return;
     }
 
     try {
-      // Log to database
-      await storage.createModerationLog({
+      // Get existing warning count before adding the new one
+      const existingWarnings = await storage.getUserWarnings(user.id, interaction.guild.id);
+      const warnNumber = existingWarnings.length + 1;
+
+      const log = await storage.createModerationLog({
         serverId: interaction.guild.id,
         moderatorId: interaction.user.id,
         targetUserId: user.id,
@@ -489,19 +499,58 @@ const warnCommand = {
         channelId: interaction.channel?.id,
       });
 
+      // Determine if auto-escalation applies
+      let escalationNote = '';
+      const member = await interaction.guild.members.fetch(user.id).catch(() => null);
+
+      if (member) {
+        if (warnNumber >= WARN_KICK_THRESHOLD) {
+          if (member.kickable) {
+            await member.kick(`Auto-kick: reached ${WARN_KICK_THRESHOLD} warnings`);
+            await storage.createModerationLog({
+              serverId: interaction.guild.id,
+              moderatorId: interaction.client.user!.id,
+              targetUserId: user.id,
+              action: 'kick',
+              reason: `Automatic: reached ${WARN_KICK_THRESHOLD} warnings`,
+              channelId: interaction.channel?.id,
+            });
+            escalationNote = `\n⚠️ **Auto-kicked** — user has reached ${WARN_KICK_THRESHOLD} warnings.`;
+          }
+        } else if (warnNumber >= WARN_MUTE_THRESHOLD) {
+          if (member.moderatable) {
+            const muteMs = WARN_MUTE_DURATION_MINS * 60_000;
+            await member.timeout(muteMs, `Auto-mute: reached ${WARN_MUTE_THRESHOLD} warnings`);
+            await storage.createModerationLog({
+              serverId: interaction.guild.id,
+              moderatorId: interaction.client.user!.id,
+              targetUserId: user.id,
+              action: 'mute',
+              reason: `Automatic: reached ${WARN_MUTE_THRESHOLD} warnings`,
+              duration: WARN_MUTE_DURATION_MINS,
+              channelId: interaction.channel?.id,
+              expiresAt: new Date(Date.now() + muteMs),
+            });
+            escalationNote = `\n🔇 **Auto-muted for ${WARN_MUTE_DURATION_MINS} minutes** — user has reached ${WARN_MUTE_THRESHOLD} warnings.`;
+          }
+        }
+      }
+
       const embed = new EmbedBuilder()
-        .setColor(0xffff00) // Yellow for warning
-        .setTitle('⚠️ User Warned')
-        .setDescription(`${user.tag} has been warned.`)
+        .setColor(0xffff00)
+        .setTitle(`⚠️ Warning #${warnNumber}`)
+        .setDescription(`${user.tag} has been warned.${escalationNote}`)
         .addFields(
           { name: 'Reason', value: reason, inline: true },
-          { name: 'Moderator', value: interaction.user.tag, inline: true }
+          { name: 'Moderator', value: interaction.user.tag, inline: true },
+          { name: 'Total Warnings', value: `${warnNumber}`, inline: true },
+          { name: 'Case ID', value: `\`${log.id}\``, inline: false },
         )
         .setTimestamp();
 
       await interaction.reply({ embeds: [embed] });
 
-      // Try to send DM to the warned user
+      // DM the warned user
       try {
         const dmEmbed = new EmbedBuilder()
           .setColor(0xffff00)
@@ -509,18 +558,120 @@ const warnCommand = {
           .setDescription(`You have received a warning in **${interaction.guild.name}**.`)
           .addFields(
             { name: 'Reason', value: reason, inline: false },
-            { name: 'Moderator', value: interaction.user.tag, inline: true }
+            { name: 'Moderator', value: interaction.user.tag, inline: true },
+            { name: 'Warning #', value: `${warnNumber}`, inline: true },
           )
           .setTimestamp();
 
         await user.send({ embeds: [dmEmbed] });
-      } catch (error) {
-        // User has DMs disabled, continue silently
+      } catch {
+        // User has DMs disabled — continue silently
       }
 
-    } catch (error) {
-      error('Error warning user:', error);
+    } catch (err) {
+      error('Error warning user:', err);
       await interaction.reply({ content: 'An error occurred while warning the user.', ephemeral: true });
+    }
+  },
+};
+
+const warningsCommand = {
+  data: new SlashCommandBuilder()
+    .setName('warnings')
+    .setDescription('View all warnings for a user')
+    .addUserOption(option =>
+      option.setName('user')
+        .setDescription('The user to check')
+        .setRequired(true))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+
+  async execute(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+
+    if (!interaction.guild) {
+      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      return;
+    }
+
+    try {
+      const warnings = await storage.getUserWarnings(user.id, interaction.guild.id);
+
+      if (warnings.length === 0) {
+        await interaction.reply({ content: `${user.tag} has no warnings.`, ephemeral: true });
+        return;
+      }
+
+      const lines = warnings.map((w, i) => {
+        const date = new Date(w.createdAt ?? Date.now()).toLocaleDateString();
+        return `**#${i + 1}** — ${w.reason ?? 'No reason'} *(${date})*\n  └ Case: \`${w.id}\``;
+      });
+
+      const embed = new EmbedBuilder()
+        .setColor(0xffff00)
+        .setTitle(`⚠️ Warnings: ${user.tag}`)
+        .setDescription(lines.join('\n\n'))
+        .setFooter({ text: `${warnings.length} warning(s) total • Use /delwarn <caseId> to remove one` })
+        .setThumbnail(user.displayAvatarURL())
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+
+    } catch (err) {
+      error('Error fetching warnings:', err);
+      await interaction.reply({ content: 'An error occurred while fetching warnings.', ephemeral: true });
+    }
+  },
+};
+
+const delwarnCommand = {
+  data: new SlashCommandBuilder()
+    .setName('delwarn')
+    .setDescription('Remove a warning by its case ID')
+    .addStringOption(option =>
+      option.setName('caseid')
+        .setDescription('The case ID of the warning (shown in /warnings)')
+        .setRequired(true))
+    .addStringOption(option =>
+      option.setName('reason')
+        .setDescription('Reason for removing the warning')
+        .setRequired(false))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+
+  async execute(interaction: ChatInputCommandInteraction) {
+    const caseId = interaction.options.getString('caseid', true).trim();
+    const reason = interaction.options.getString('reason') ?? 'No reason provided';
+
+    if (!interaction.guild) {
+      await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      return;
+    }
+
+    try {
+      const deleted = await storage.deleteModerationLog(caseId, interaction.guild.id);
+
+      if (!deleted) {
+        await interaction.reply({
+          content: `No warning found with case ID \`${caseId}\` in this server.`,
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const embed = new EmbedBuilder()
+        .setColor(0x2ECC71)
+        .setTitle('✅ Warning Removed')
+        .addFields(
+          { name: 'Case ID', value: `\`${caseId}\``, inline: true },
+          { name: 'Removed by', value: interaction.user.tag, inline: true },
+          { name: 'Reason', value: reason, inline: false },
+        )
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed] });
+
+    } catch (err) {
+      error('Error deleting warning:', err);
+      await interaction.reply({ content: 'An error occurred while removing the warning.', ephemeral: true });
     }
   },
 };
@@ -647,5 +798,7 @@ export const moderationCommands = [
   jailCommand,
   unjailCommand,
   warnCommand,
+  warningsCommand,
+  delwarnCommand,
   modHistoryCommand,
 ];

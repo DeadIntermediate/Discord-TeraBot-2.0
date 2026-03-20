@@ -37,6 +37,8 @@ export interface IStorage {
   createModerationLog(log: InsertModerationLog): Promise<ModerationLog>;
   getModerationLogs(serverId: string, limit?: number): Promise<ModerationLog[]>;
   getUserModerationHistory(userId: string, serverId?: string): Promise<ModerationLog[]>;
+  getUserWarnings(userId: string, serverId: string): Promise<ModerationLog[]>;
+  deleteModerationLog(id: string, serverId: string): Promise<boolean>;
 
   // Ticket methods
   createTicket(ticket: InsertTicket): Promise<Ticket>;
@@ -180,6 +182,23 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(moderationLogs)
       .where(and(...conditions))
       .orderBy(desc(moderationLogs.createdAt));
+  }
+
+  async getUserWarnings(userId: string, serverId: string): Promise<ModerationLog[]> {
+    return await db.select().from(moderationLogs)
+      .where(and(
+        eq(moderationLogs.targetUserId, userId),
+        eq(moderationLogs.serverId, serverId),
+        eq(moderationLogs.action, 'warn'),
+      ))
+      .orderBy(asc(moderationLogs.createdAt));
+  }
+
+  async deleteModerationLog(id: string, serverId: string): Promise<boolean> {
+    const [deleted] = await db.delete(moderationLogs)
+      .where(and(eq(moderationLogs.id, id), eq(moderationLogs.serverId, serverId)))
+      .returning();
+    return !!deleted;
   }
 
   // Ticket methods
