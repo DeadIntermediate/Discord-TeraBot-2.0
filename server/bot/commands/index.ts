@@ -10,6 +10,7 @@ import * as helpCommand from './help'
 import { ttsCommand } from './tts'
 import { contextMenuCommands } from './contextMenus'
 import { panelCommand } from './panels'
+import { configCommand, levelRoleCommand } from './config'
 
 export const commands = [
   ...moderationCommands,
@@ -24,4 +25,6 @@ export const commands = [
   gamesCommand,
   helpCommand,
   ttsCommand,
+  configCommand,
+  levelRoleCommand,
 ]

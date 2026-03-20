@@ -1,10 +1,11 @@
 import {
   users, discordServers, discordUsers, serverMembers,
-  moderationLogs, tickets, giveaways, roleReactions, savedEmbeds,
+  moderationLogs, tickets, giveaways, roleReactions, savedEmbeds, levelRoles,
   type User, type InsertUser, type DiscordServer, type InsertDiscordServer,
   type DiscordUser, type InsertDiscordUser, type ServerMember, type InsertServerMember,
   type ModerationLog, type InsertModerationLog, type Ticket, type InsertTicket,
-  type Giveaway, type InsertGiveaway, type RoleReaction, type InsertRoleReaction
+  type Giveaway, type InsertGiveaway, type RoleReaction, type InsertRoleReaction,
+  type LevelRole, type InsertLevelRole,
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, and, desc, asc, lte, sql } from "drizzle-orm";
@@ -39,6 +40,12 @@ export interface IStorage {
   getUserModerationHistory(userId: string, serverId?: string): Promise<ModerationLog[]>;
   getUserWarnings(userId: string, serverId: string): Promise<ModerationLog[]>;
   deleteModerationLog(id: string, serverId: string): Promise<boolean>;
+
+  // Level role methods
+  getLevelRoles(serverId: string): Promise<LevelRole[]>;
+  getLevelRole(serverId: string, level: number, levelType: string): Promise<LevelRole | undefined>;
+  upsertLevelRole(data: InsertLevelRole): Promise<LevelRole>;
+  deleteLevelRole(serverId: string, level: number, levelType: string): Promise<boolean>;
 
   // Ticket methods
   createTicket(ticket: InsertTicket): Promise<Ticket>;
@@ -197,6 +204,44 @@ export class DatabaseStorage implements IStorage {
   async deleteModerationLog(id: string, serverId: string): Promise<boolean> {
     const [deleted] = await db.delete(moderationLogs)
       .where(and(eq(moderationLogs.id, id), eq(moderationLogs.serverId, serverId)))
+      .returning();
+    return !!deleted;
+  }
+
+  // Level role methods
+  async getLevelRoles(serverId: string): Promise<LevelRole[]> {
+    return await db.select().from(levelRoles)
+      .where(eq(levelRoles.serverId, serverId))
+      .orderBy(levelRoles.levelType, levelRoles.level);
+  }
+
+  async getLevelRole(serverId: string, level: number, levelType: string): Promise<LevelRole | undefined> {
+    const [row] = await db.select().from(levelRoles)
+      .where(and(
+        eq(levelRoles.serverId, serverId),
+        eq(levelRoles.level, level),
+        eq(levelRoles.levelType, levelType),
+      ));
+    return row;
+  }
+
+  async upsertLevelRole(data: InsertLevelRole): Promise<LevelRole> {
+    const [row] = await db.insert(levelRoles).values(data)
+      .onConflictDoUpdate({
+        target: [levelRoles.serverId, levelRoles.level, levelRoles.levelType],
+        set: { roleId: data.roleId },
+      })
+      .returning();
+    return row;
+  }
+
+  async deleteLevelRole(serverId: string, level: number, levelType: string): Promise<boolean> {
+    const [deleted] = await db.delete(levelRoles)
+      .where(and(
+        eq(levelRoles.serverId, serverId),
+        eq(levelRoles.level, level),
+        eq(levelRoles.levelType, levelType),
+      ))
       .returning();
     return !!deleted;
   }

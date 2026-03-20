@@ -186,9 +186,27 @@ export const gameRecommendations = pgTable("game_recommendations", {
   respondedAt: timestamp("responded_at"),
 });
 
+export const levelRoles = pgTable("level_roles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serverId: varchar("server_id").notNull().references(() => discordServers.id),
+  level: integer("level").notNull(),
+  roleId: varchar("role_id").notNull(),
+  levelType: text("level_type").notNull().default("global"), // text, voice, global
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  serverLevelTypeUnique: unique().on(table.serverId, table.level, table.levelType),
+}));
+
 // Cards Against Humanity feature removed. Related tables and types were deleted.
 
 // Relations
+export const levelRolesRelations = relations(levelRoles, ({ one }) => ({
+  server: one(discordServers, {
+    fields: [levelRoles.serverId],
+    references: [discordServers.id],
+  }),
+}));
+
 export const discordServersRelations = relations(discordServers, ({ many }) => ({
   members: many(serverMembers),
   moderationLogs: many(moderationLogs),
@@ -199,6 +217,7 @@ export const discordServersRelations = relations(discordServers, ({ many }) => (
   savedEmbeds: many(savedEmbeds),
   gameFavorites: many(gameFavorites),
   gameRecommendations: many(gameRecommendations),
+  levelRoles: many(levelRoles),
   // CAH tables removed
 }));
 
@@ -387,6 +406,11 @@ export const insertGameRecommendationSchema = createInsertSchema(gameRecommendat
   createdAt: true,
 });
 
+export const insertLevelRoleSchema = createInsertSchema(levelRoles).omit({
+  id: true,
+  createdAt: true,
+});
+
 // CAH insert schemas removed
 
 // Types
@@ -419,6 +443,9 @@ export type StreamNotification = typeof streamNotifications.$inferSelect;
 
 export type InsertSavedEmbed = z.infer<typeof insertSavedEmbedSchema>;
 export type SavedEmbed = typeof savedEmbeds.$inferSelect;
+
+export type InsertLevelRole = z.infer<typeof insertLevelRoleSchema>;
+export type LevelRole = typeof levelRoles.$inferSelect;
 
 export type InsertGameCache = z.infer<typeof insertGameCacheSchema>;
 export type GameCache = typeof gameCache.$inferSelect;

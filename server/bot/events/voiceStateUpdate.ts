@@ -3,6 +3,11 @@ import { storage } from '../../storage';
 import { calculateLevel } from '../../utils/xp';
 import { info, debug, error } from '../../utils/logger';
 import { handleTTSVoiceStateUpdate } from '../commands/tts';
+import { assignLevelRoles } from './messageCreate';
+import { db } from '../../db';
+import { discordServers } from '../../../shared/schema';
+import { eq } from 'drizzle-orm';
+import type { ServerSettings } from '../commands/config';
 
 // Track voice session start times: key = `${guildId}-${userId}`
 const voiceSessionStart = new Map<string, number>();
@@ -113,11 +118,28 @@ async function awardVoiceXP(
 
     if (newVoiceLevel > oldVoiceLevel && voiceState) {
       info(`🎉 ${voiceState.member?.user.tag} reached Voice Level ${newVoiceLevel} in ${voiceState.guild.name}!`);
-      const systemChannel = voiceState.guild.systemChannel;
-      if (systemChannel) {
-        await systemChannel.send({
+
+      // Load settings for announcement channel + level-up roles
+      const [server] = await db.select().from(discordServers).where(eq(discordServers.id, guildId)).limit(1);
+      const settings = (server?.settings as ServerSettings) ?? {};
+
+      const announceChannelId = settings.levelUpChannelId;
+      const ch = announceChannelId
+        ? voiceState.guild.channels.cache.get(announceChannelId)
+        : voiceState.guild.systemChannel;
+      if (ch && 'send' in ch) {
+        await (ch as any).send({
           content: `🎤 Congratulations ${voiceState.member}! You've reached **Voice Level ${newVoiceLevel}**! 🎉`,
         });
+      }
+
+      await assignLevelRoles(voiceState.guild, userId, newVoiceLevel, 'voice', settings);
+
+      // Check global level-up too (voice level changed, global may have changed)
+      const newGlobalLevel = Math.floor((newVoiceLevel + (member.textLevel ?? 1)) / 2);
+      const oldGlobalLevel = Math.floor((oldVoiceLevel + (member.textLevel ?? 1)) / 2);
+      if (newGlobalLevel > oldGlobalLevel) {
+        await assignLevelRoles(voiceState.guild, userId, newGlobalLevel, 'global', settings);
       }
     }
   } catch (err) {
