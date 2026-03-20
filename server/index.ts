@@ -1,3 +1,8 @@
+// Load .env before anything else (no-op if vars already set by the shell)
+import { config as loadDotenv } from 'dotenv';
+loadDotenv();
+
+import { runSetupIfNeeded } from './utils/firstRunSetup';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -41,8 +46,11 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Interactive first-run setup — prompts for missing required vars and saves to .env
+  await runSetupIfNeeded();
+
   info('🚀 Starting TeraBot server...\n');
-  
+
   // Validate environment variables first
   const envValidation = validateEnvironment();
   displayValidationResults(envValidation);
