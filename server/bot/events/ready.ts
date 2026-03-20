@@ -2,6 +2,7 @@ import { Client } from 'discord.js';
 import { storage } from '../../storage';
 import { pool } from '../../db';
 import { info, debug, warn, error } from '../../utils/logger';
+import { startStreamMonitor } from '../../utils/streamMonitor';
 
 export async function readyHandler(client: Client) {
   // ASCII Art Banner (debug-only)
@@ -135,4 +136,6 @@ export async function readyHandler(client: Client) {
   info(`⏰ Ready at: ${new Date().toLocaleString()}`);
   debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   debug('\n');
+
+  startStreamMonitor(client);
 }
