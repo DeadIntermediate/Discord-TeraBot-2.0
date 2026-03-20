@@ -12,6 +12,7 @@ import { handleContextMenuButton, handleContextMenuModal } from '../commands/con
 import { handlePanelButton, handlePanelModal } from '../commands/panels';
 import { handleGiveawayCreateModal, handleGiveawayAutocomplete } from '../commands/giveaways';
 import { handleTicketAutocomplete } from '../commands/tickets';
+import { handleGameAutocomplete } from '../commands/games';
 import { error } from '../../utils/logger';
 
 export async function interactionCreateHandler(interaction: Interaction) {
@@ -86,6 +87,8 @@ async function handleAutocomplete(interaction: any) {
       await handleGiveawayAutocomplete(interaction);
     } else if (commandName === 'ticket-manage') {
       await handleTicketAutocomplete(interaction);
+    } else if (commandName === 'game') {
+      await handleGameAutocomplete(interaction);
     }
   } catch (err) {
     error('Error handling autocomplete:', err);

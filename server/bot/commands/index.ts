@@ -6,8 +6,6 @@ import { embedCommands } from './embeds'
 import { roleReactionCommands } from './roleReactions'
 import * as streamsCommand from './streams'
 import * as gamesCommand from './games'
-import * as gamehelpCommand from './gamehelp'
-import * as gamedemoCommand from './gamedemo'
 import * as helpCommand from './help'
 import { ttsCommand } from './tts'
 import { contextMenuCommands } from './contextMenus'
@@ -24,8 +22,6 @@ export const commands = [
   panelCommand,
   streamsCommand,
   gamesCommand,
-  gamehelpCommand,
-  gamedemoCommand,
   helpCommand,
   ttsCommand,
 ]

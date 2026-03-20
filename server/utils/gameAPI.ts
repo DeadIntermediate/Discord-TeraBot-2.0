@@ -1,75 +1,43 @@
-/**
- * Game Database API Service
- * Aggregates data from multiple gaming APIs to provide comprehensive game information
- * 
- * Primary APIs:
- * - RAWG Video Games Database (Free, no auth required)
- * - IGDB (Twitch Gaming Database) (Requires auth)
- * - Steam API (Free, for additional data)
- */
+import { error as logError } from './logger';
 
 export interface GameData {
-  id: string;
+  id: string | number;
   name: string;
   slug: string;
   description?: string;
   synopsis?: string;
   released?: string;
-  year?: number;
   rating?: number;
   rating_top?: number;
   metacritic?: number;
-  platforms?: GamePlatform[];
-  genres?: string[];
-  developers?: string[];
-  publishers?: string[];
-  esrb_rating?: string;
-  tags?: string[];
-  background_image?: string;
-  screenshots?: string[];
-  website?: string;
-  reddit_url?: string;
   metacritic_url?: string;
-  playtime?: number; // average playtime in hours
-  achievements_count?: number;
-  parent_platforms?: string[];
+  platforms?: GamePlatform[];
+  genres?: { name: string }[];
+  developers?: { name: string }[];
+  publishers?: { name: string }[];
+  esrb_rating?: string | { name: string };
+  tags?: { name: string }[];
+  background_image?: string;
+  website?: string;
+  playtime?: number;
   stores?: GameStore[];
-  clip?: GameClip;
-  user_game?: any;
 }
 
 export interface GamePlatform {
   id: number;
   name: string;
   slug: string;
-  image?: string;
-  year_end?: number;
-  year_start?: number;
-  games_count?: number;
-  image_background?: string;
 }
 
 export interface GameStore {
   id: number;
   name: string;
   slug: string;
-  domain?: string;
-  games_count?: number;
-  image_background?: string;
   url?: string;
-}
-
-export interface GameClip {
-  clip?: string;
-  clips?: any;
-  video?: string;
-  preview?: string;
 }
 
 export interface GameSearchResult {
   count: number;
-  next?: string;
-  previous?: string;
   results: GameData[];
 }
 
@@ -81,294 +49,327 @@ export interface GameScreenshot {
   is_deleted: boolean;
 }
 
-import { error as logError, warn } from './logger';
+export interface SearchFilters {
+  genre?: string;
+  parentPlatform?: number;
+}
 
 class GameAPIService {
-  private readonly RAWG_BASE_URL = 'https://api.rawg.io/api';
-  private readonly RAWG_API_KEY: string;
-  private readonly IGDB_CLIENT_ID: string;
-  private readonly IGDB_ACCESS_TOKEN: string;
-  
-  // Simple in-memory cache (in production, use Redis or similar)
-  private cache = new Map<string, { data: any; timestamp: number }>();
-  private readonly CACHE_TTL = 3600000; // 1 hour in milliseconds
-  private readonly missingApiKey: boolean;
+  private readonly BASE = 'https://api.rawg.io/api';
+  private readonly key: string;
+  private readonly cache = new Map<string, { data: any; ts: number }>();
+  private readonly TTL = 3_600_000;      // 1 hour
+  private readonly AC_TTL = 300_000;     // 5 min for autocomplete
+  readonly missingApiKey: boolean;
 
   constructor() {
-    this.RAWG_API_KEY = process.env.RAWG_API_KEY || '';
-    this.IGDB_CLIENT_ID = process.env.IGDB_CLIENT_ID || '';
-    this.IGDB_ACCESS_TOKEN = process.env.IGDB_ACCESS_TOKEN || '';
-    // Require RAWG API key for live lookups. No mock fallback in this bot.
-    this.missingApiKey = !this.RAWG_API_KEY;
+    this.key = process.env.RAWG_API_KEY || '';
+    this.missingApiKey = !this.key;
     if (this.missingApiKey) {
-      logError('❌ RAWG API key is missing. This bot requires RAWG_API_KEY in the environment for live game lookups.');
-      logError('💡 Get a free API key at: https://rawg.io/apidocs');
+      logError('RAWG_API_KEY not set — /game commands will not work. Get a free key at rawg.io/apidocs');
     }
   }
 
-  private getCachedData(key: string): any | null {
-    const cached = this.cache.get(key);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      return cached.data;
-    }
+  private get<T>(key: string): T | null {
+    const hit = this.cache.get(key);
+    if (hit && Date.now() - hit.ts < this.TTL) return hit.data as T;
     return null;
   }
 
-  private setCachedData(key: string, data: any): void {
-    this.cache.set(key, { data, timestamp: Date.now() });
+  private set(key: string, data: any, ttl = this.TTL) {
+    this.cache.set(key, { data, ts: Date.now() - (this.TTL - ttl) });
   }
 
-  /**
-   * Search for games by name
-   */
-  async searchGames(query: string, page: number = 1, pageSize: number = 10): Promise<GameSearchResult> {
-    const cacheKey = `search_${query}_${page}_${pageSize}`;
-    const cached = this.getCachedData(cacheKey);
+  private url(path: string, params: Record<string, string> = {}): string {
+    const u = new URL(`${this.BASE}${path}`);
+    u.searchParams.set('key', this.key);
+    for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
+    return u.toString();
+  }
+
+  private requireKey() {
+    if (this.missingApiKey) throw new Error('RAWG_API_KEY is required. Add it to .env — get one free at rawg.io/apidocs');
+  }
+
+  // ── Search ────────────────────────────────────────────────────────────────
+
+  async searchGames(
+    query: string,
+    page = 1,
+    pageSize = 10,
+    filters: SearchFilters = {},
+  ): Promise<GameSearchResult> {
+    this.requireKey();
+    const cacheKey = `search_${query}_${page}_${pageSize}_${filters.genre || ''}_${filters.parentPlatform || ''}`;
+    const cached = this.get<GameSearchResult>(cacheKey);
     if (cached) return cached;
-    if (this.missingApiKey) {
-      throw new Error('RAWG_API_KEY is required for game lookups. Set RAWG_API_KEY in environment.');
-    }
 
     try {
-      const url = new URL(`${this.RAWG_BASE_URL}/games`);
-      url.searchParams.append('search', query);
-      url.searchParams.append('page', page.toString());
-      url.searchParams.append('page_size', pageSize.toString());
-      
-      if (this.RAWG_API_KEY) {
-        url.searchParams.append('key', this.RAWG_API_KEY);
-      }
+      const params: Record<string, string> = {
+        search: query,
+        page: String(page),
+        page_size: String(pageSize),
+      };
+      if (filters.genre) params.genres = filters.genre;
+      if (filters.parentPlatform) params.parent_platforms = String(filters.parentPlatform);
 
-      const response = await fetch(url.toString());
-      if (!response.ok) {
-        throw new Error(`RAWG API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      this.setCachedData(cacheKey, data);
+      const res = await fetch(this.url('/games', params));
+      if (!res.ok) throw new Error(`RAWG ${res.status}: ${res.statusText}`);
+      const data = await res.json();
+      this.set(cacheKey, data);
       return data;
-    } catch (error) {
-      logError('Error searching games:', error);
-      throw error;
+    } catch (err) {
+      logError('Error searching games:', err);
+      throw err;
     }
   }
 
-  /**
-   * Get detailed information about a specific game
-   */
+  async searchAutocomplete(query: string): Promise<{ id: number; name: string }[]> {
+    if (!this.key || query.length < 2) return [];
+    const cacheKey = `ac_${query.toLowerCase()}`;
+    const cached = this.get<{ id: number; name: string }[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(this.url('/games', { search: query, page_size: '10' }));
+      if (!res.ok) return [];
+      const data = await res.json();
+      const results = (data.results || []).map((g: any) => ({ id: g.id, name: g.name }));
+      this.set(cacheKey, results, this.AC_TTL);
+      return results;
+    } catch {
+      return [];
+    }
+  }
+
+  // ── Single game ───────────────────────────────────────────────────────────
+
   async getGameDetails(gameId: string | number): Promise<GameData | null> {
+    this.requireKey();
     const cacheKey = `game_${gameId}`;
-    const cached = this.getCachedData(cacheKey);
+    const cached = this.get<GameData>(cacheKey);
     if (cached) return cached;
-    if (this.missingApiKey) {
-      throw new Error('RAWG_API_KEY is required for game lookups. Set RAWG_API_KEY in environment.');
-    }
 
     try {
-      const url = new URL(`${this.RAWG_BASE_URL}/games/${gameId}`);
-      
-      if (this.RAWG_API_KEY) {
-        url.searchParams.append('key', this.RAWG_API_KEY);
-      }
-
-      const response = await fetch(url.toString());
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null;
-        }
-        throw new Error(`RAWG API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      this.setCachedData(cacheKey, data);
+      const res = await fetch(this.url(`/games/${gameId}`));
+      if (!res.ok) { if (res.status === 404) return null; throw new Error(`RAWG ${res.status}`); }
+      const data = await res.json();
+      this.set(cacheKey, data);
       return data;
-    } catch (error) {
-      logError(`Error getting game details for ID ${gameId}:`, error);
+    } catch (err) {
+      logError(`Error getting game ${gameId}:`, err);
       return null;
     }
   }
 
-  /**
-   * Get game screenshots
-   */
   async getGameScreenshots(gameId: string | number): Promise<GameScreenshot[]> {
-    const cacheKey = `screenshots_${gameId}`;
-    const cached = this.getCachedData(cacheKey);
+    this.requireKey();
+    const cacheKey = `ss_${gameId}`;
+    const cached = this.get<GameScreenshot[]>(cacheKey);
     if (cached) return cached;
-    if (this.missingApiKey) {
-      throw new Error('RAWG_API_KEY is required for game screenshots. Set RAWG_API_KEY in environment.');
-    }
 
     try {
-      const url = new URL(`${this.RAWG_BASE_URL}/games/${gameId}/screenshots`);
-      
-      if (this.RAWG_API_KEY) {
-        url.searchParams.append('key', this.RAWG_API_KEY);
-      }
-
-      const response = await fetch(url.toString());
-      if (!response.ok) {
-        throw new Error(`RAWG API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const res = await fetch(this.url(`/games/${gameId}/screenshots`));
+      if (!res.ok) throw new Error(`RAWG ${res.status}`);
+      const data = await res.json();
       const screenshots = data.results || [];
-      this.setCachedData(cacheKey, screenshots);
+      this.set(cacheKey, screenshots);
       return screenshots;
-    } catch (error) {
-      logError(`Error getting screenshots for game ID ${gameId}:`, error);
+    } catch (err) {
+      logError(`Error getting screenshots for ${gameId}:`, err);
       return [];
     }
   }
 
-  /**
-   * Get random popular games
-   */
-  async getRandomGames(count: number = 5): Promise<GameData[]> {
-    const cacheKey = `random_${count}`;
-    const cached = this.getCachedData(cacheKey);
+  // ── Collections ───────────────────────────────────────────────────────────
+
+  async getTopGames(
+    count = 10,
+    options: { genre?: string; parentPlatform?: number; year?: number; ordering?: string } = {},
+  ): Promise<GameData[]> {
+    this.requireKey();
+    const { genre, parentPlatform, year, ordering = '-metacritic' } = options;
+    const cacheKey = `top_${count}_${genre || ''}_${parentPlatform || ''}_${year || ''}_${ordering}`;
+    const cached = this.get<GameData[]>(cacheKey);
     if (cached) return cached;
-    if (this.missingApiKey) {
-      throw new Error('RAWG_API_KEY is required for random games. Set RAWG_API_KEY in environment.');
-    }
 
     try {
-      const url = new URL(`${this.RAWG_BASE_URL}/games`);
-      url.searchParams.append('ordering', '-rating');
-      url.searchParams.append('page_size', count.toString());
-      
-      // Random page between 1-50 for variety
-      const randomPage = Math.floor(Math.random() * 50) + 1;
-      url.searchParams.append('page', randomPage.toString());
-      
-      if (this.RAWG_API_KEY) {
-        url.searchParams.append('key', this.RAWG_API_KEY);
-      }
+      const params: Record<string, string> = { ordering, page_size: String(count) };
+      if (genre) params.genres = genre;
+      if (parentPlatform) params.parent_platforms = String(parentPlatform);
+      if (year) params.dates = `${year}-01-01,${year}-12-31`;
 
-      const response = await fetch(url.toString());
-      if (!response.ok) {
-        throw new Error(`RAWG API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      const games = data.results || [];
-      this.setCachedData(cacheKey, games);
-      return games;
-    } catch (error) {
-      logError('Error getting random games:', error);
+      const res = await fetch(this.url('/games', params));
+      if (!res.ok) throw new Error(`RAWG ${res.status}`);
+      const data = await res.json();
+      this.set(cacheKey, data.results || []);
+      return data.results || [];
+    } catch (err) {
+      logError('Error getting top games:', err);
       return [];
     }
   }
 
-  /**
-   * Get trending games (highly rated recent releases)
-   */
-  async getTrendingGames(count: number = 10): Promise<GameData[]> {
-    const cacheKey = `trending_${count}`;
-    const cached = this.getCachedData(cacheKey);
+  async getTrendingGames(count = 10, genre?: string): Promise<GameData[]> {
+    this.requireKey();
+    const cacheKey = `trending_${count}_${genre || ''}`;
+    const cached = this.get<GameData[]>(cacheKey);
     if (cached) return cached;
-    if (this.missingApiKey) {
-      throw new Error('RAWG_API_KEY is required for trending games. Set RAWG_API_KEY in environment.');
-    }
 
     try {
-      const currentYear = new Date().getFullYear();
-      const lastYear = currentYear - 1;
-      
-      const url = new URL(`${this.RAWG_BASE_URL}/games`);
-      url.searchParams.append('dates', `${lastYear}-01-01,${currentYear}-12-31`);
-      url.searchParams.append('ordering', '-rating');
-      url.searchParams.append('page_size', count.toString());
-      
-      if (this.RAWG_API_KEY) {
-        url.searchParams.append('key', this.RAWG_API_KEY);
-      }
+      const year = new Date().getFullYear();
+      const params: Record<string, string> = {
+        dates: `${year - 1}-01-01,${year}-12-31`,
+        ordering: '-rating',
+        page_size: String(count),
+      };
+      if (genre) params.genres = genre;
 
-      const response = await fetch(url.toString());
-      if (!response.ok) {
-        throw new Error(`RAWG API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      const games = data.results || [];
-      this.setCachedData(cacheKey, games);
-      return games;
-    } catch (error) {
-      logError('Error getting trending games:', error);
+      const res = await fetch(this.url('/games', params));
+      if (!res.ok) throw new Error(`RAWG ${res.status}`);
+      const data = await res.json();
+      this.set(cacheKey, data.results || []);
+      return data.results || [];
+    } catch (err) {
+      logError('Error getting trending games:', err);
       return [];
     }
   }
 
-  /**
-   * Format rating for display
-   */
+  async getNewReleases(count = 10): Promise<GameData[]> {
+    this.requireKey();
+    const cacheKey = `new_${count}`;
+    const cached = this.get<GameData[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const ago = new Date(Date.now() - 30 * 86_400_000).toISOString().split('T')[0];
+      const res = await fetch(this.url('/games', {
+        dates: `${ago},${today}`,
+        ordering: '-added',
+        page_size: String(count),
+      }));
+      if (!res.ok) throw new Error(`RAWG ${res.status}`);
+      const data = await res.json();
+      this.set(cacheKey, data.results || []);
+      return data.results || [];
+    } catch (err) {
+      logError('Error getting new releases:', err);
+      return [];
+    }
+  }
+
+  async getRandomGames(count = 5): Promise<GameData[]> {
+    this.requireKey();
+    // Don't cache random results
+    try {
+      const page = Math.floor(Math.random() * 50) + 1;
+      const res = await fetch(this.url('/games', {
+        ordering: '-rating',
+        page_size: String(count),
+        page: String(page),
+      }));
+      if (!res.ok) throw new Error(`RAWG ${res.status}`);
+      const data = await res.json();
+      return data.results || [];
+    } catch (err) {
+      logError('Error getting random games:', err);
+      return [];
+    }
+  }
+
+  async getSuggestedGames(gameId: string | number, count = 6): Promise<GameData[]> {
+    this.requireKey();
+    const cacheKey = `suggested_${gameId}`;
+    const cached = this.get<GameData[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(this.url(`/games/${gameId}/suggested`, { page_size: String(count) }));
+      if (!res.ok) throw new Error(`RAWG ${res.status}`);
+      const data = await res.json();
+      this.set(cacheKey, data.results || []);
+      return data.results || [];
+    } catch (err) {
+      logError(`Error getting suggested games for ${gameId}:`, err);
+      return [];
+    }
+  }
+
+  // ── Display helpers ───────────────────────────────────────────────────────
+
   formatRating(rating?: number, rating_top?: number): string {
     if (!rating) return 'No rating';
-    if (rating_top) {
-      return `${rating.toFixed(1)}/${rating_top}`;
-    }
-    return `${rating.toFixed(1)}/5`;
+    return `${rating.toFixed(1)}/${rating_top || 5}`;
   }
 
-  /**
-   * Format platforms for display
-   */
   formatPlatforms(platforms?: GamePlatform[]): string {
-    if (!platforms || platforms.length === 0) return 'Unknown';
-    
-    // Group by parent platform type
-    const platformGroups: { [key: string]: string[] } = {};
-    
-    platforms.forEach(platform => {
-      const name = platform.name;
-      
-      // Categorize platforms
-      if (name.includes('PlayStation') || name.includes('PS')) {
-        platformGroups['PlayStation'] = platformGroups['PlayStation'] || [];
-        platformGroups['PlayStation'].push(name);
-      } else if (name.includes('Xbox')) {
-        platformGroups['Xbox'] = platformGroups['Xbox'] || [];
-        platformGroups['Xbox'].push(name);
-      } else if (name.includes('Nintendo') || name.includes('Switch') || name.includes('Wii')) {
-        platformGroups['Nintendo'] = platformGroups['Nintendo'] || [];
-        platformGroups['Nintendo'].push(name);
-      } else if (name.includes('PC') || name.includes('Windows') || name.includes('Steam')) {
-        platformGroups['PC'] = platformGroups['PC'] || [];
-        platformGroups['PC'].push(name);
-      } else if (name.includes('Mobile') || name.includes('iOS') || name.includes('Android')) {
-        platformGroups['Mobile'] = platformGroups['Mobile'] || [];
-        platformGroups['Mobile'].push(name);
-      } else {
-        platformGroups['Other'] = platformGroups['Other'] || [];
-        platformGroups['Other'].push(name);
-      }
-    });
-
-    // Format output
-    const formatted = Object.keys(platformGroups).map(group => {
-      const platforms = platformGroups[group];
-      if (platforms.length === 1) {
-        return platforms[0];
-      } else {
-        return `${group} (${platforms.length})`;
-      }
-    });
-
-    return formatted.join(', ');
+    if (!platforms?.length) return 'Unknown';
+    const groups: Record<string, string[]> = {};
+    for (const p of platforms) {
+      const n = p.name;
+      const key =
+        n.includes('PlayStation') || n.includes('PS') ? 'PlayStation' :
+        n.includes('Xbox') ? 'Xbox' :
+        n.includes('Nintendo') || n.includes('Switch') || n.includes('Wii') ? 'Nintendo' :
+        n.includes('PC') || n.includes('Windows') ? 'PC' :
+        n.includes('iOS') || n.includes('Android') || n.includes('Mobile') ? 'Mobile' :
+        n.includes('macOS') || n.includes('Mac') ? 'macOS' :
+        n.includes('Linux') ? 'Linux' : 'Other';
+      (groups[key] ??= []).push(n);
+    }
+    return Object.entries(groups)
+      .map(([g, ps]) => ps.length === 1 ? ps[0] : `${g} (${ps.length})`)
+      .join(', ');
   }
 
-  /**
-   * Get color based on rating
-   */
+  formatPlatformsWithEmojis(platforms?: GamePlatform[]): string {
+    if (!platforms?.length) return '❓ Unknown';
+    const EMOJI: Record<string, string> = {
+      PlayStation: '🎮', Xbox: '🎮', Nintendo: '🎮',
+      PC: '🖥️', macOS: '🍎', Linux: '🐧',
+      Mobile: '📱', Other: '🕹️',
+    };
+    const groups: Record<string, number> = {};
+    for (const p of platforms) {
+      const n = p.name;
+      const key =
+        n.includes('PlayStation') || n.includes('PS') ? 'PlayStation' :
+        n.includes('Xbox') ? 'Xbox' :
+        n.includes('Nintendo') || n.includes('Switch') || n.includes('Wii') ? 'Nintendo' :
+        n.includes('PC') || n.includes('Windows') ? 'PC' :
+        n.includes('iOS') || n.includes('Android') || n.includes('Mobile') ? 'Mobile' :
+        n.includes('macOS') || n.includes('Mac') ? 'macOS' :
+        n.includes('Linux') ? 'Linux' : 'Other';
+      groups[key] = (groups[key] || 0) + 1;
+    }
+    return Object.entries(groups)
+      .map(([g, count]) => `${EMOJI[g] || '🕹️'} ${g}${count > 1 ? ` (${count})` : ''}`)
+      .join('\n');
+  }
+
+  formatESRB(esrb?: string | { name: string }): string {
+    const rating = typeof esrb === 'string' ? esrb : esrb?.name;
+    if (!rating) return 'Not rated';
+    const map: Record<string, string> = {
+      'Everyone': '🟢 E — Everyone',
+      'Everyone 10+': '🟡 E10+ — Everyone 10+',
+      'Teen': '🟡 T — Teen',
+      'Mature': '🔴 M — Mature 17+',
+      'Adults Only': '🔴 AO — Adults Only 18+',
+      'Rating Pending': '⚪ RP — Pending',
+    };
+    return map[rating] || rating;
+  }
+
   getRatingColor(rating?: number): number {
-    if (!rating) return 0x95A5A6; // Gray
-    
-    if (rating >= 4.5) return 0x2ECC71; // Green (Excellent)
-    if (rating >= 4.0) return 0x3498DB; // Blue (Very Good)
-    if (rating >= 3.5) return 0xF39C12; // Orange (Good)
-    if (rating >= 3.0) return 0xE67E22; // Orange (Decent)
-    if (rating >= 2.0) return 0xE74C3C; // Red (Poor)
-    return 0x95A5A6; // Gray (Unrated)
+    if (!rating) return 0x95A5A6;
+    if (rating >= 4.5) return 0x2ECC71;
+    if (rating >= 4.0) return 0x3498DB;
+    if (rating >= 3.5) return 0xF39C12;
+    if (rating >= 3.0) return 0xE67E22;
+    return 0xE74C3C;
   }
 }
 
