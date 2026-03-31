@@ -74,6 +74,40 @@ detect_os() {
     fi
 }
 
+# Function to install build tools (required for native npm modules like @discordjs/opus)
+install_build_tools() {
+    local os=$(detect_os)
+
+    case $os in
+        ubuntu)
+            print_status "🔧 Installing build tools (build-essential)..." "$BLUE"
+            sudo apt-get install -y build-essential python3
+            ;;
+        centos)
+            print_status "🔧 Installing build tools (gcc, make)..." "$BLUE"
+            sudo yum groupinstall -y "Development Tools"
+            sudo yum install -y python3
+            ;;
+        arch)
+            print_status "🔧 Installing build tools (base-devel)..." "$BLUE"
+            sudo pacman -S --needed base-devel python
+            ;;
+        macos)
+            if ! command_exists "make"; then
+                print_status "🔧 Installing Xcode Command Line Tools..." "$BLUE"
+                xcode-select --install 2>/dev/null || true
+            fi
+            ;;
+        *)
+            print_status "⚠️ Could not auto-install build tools on this OS. Install 'make', 'gcc', and 'python3' manually if npm install fails." "$YELLOW"
+            return 0
+            ;;
+    esac
+
+    print_status "✅ Build tools installed!" "$GREEN"
+    return 0
+}
+
 # Function to install Node.js
 install_nodejs() {
     print_status "🔧 Installing Node.js..." "$BLUE"
@@ -372,6 +406,16 @@ if [[ "$SKIP_DEPS" != true ]]; then
     else
         npm_version=$(npm --version)
         print_status "✅ npm found: $npm_version" "$GREEN"
+    fi
+
+    # Check build tools (make/gcc) — required for native modules like @discordjs/opus
+    if ! command_exists "make"; then
+        print_status "⚠️ Build tools not found. Installing..." "$YELLOW"
+        install_build_tools || {
+            print_status "⚠️ Could not install build tools automatically. npm install may fail for native modules." "$YELLOW"
+        }
+    else
+        print_status "✅ Build tools found (make: $(make --version | head -1))" "$GREEN"
     fi
 fi
 
