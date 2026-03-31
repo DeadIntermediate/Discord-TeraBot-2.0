@@ -268,7 +268,7 @@ install_dependencies() {
         return 1
     fi
     
-    npm install && {
+    npm install --omit=optional && {
         print_status "✅ Node.js dependencies installed successfully!" "$GREEN"
         return 0
     } || {
