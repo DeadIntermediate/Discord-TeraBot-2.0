@@ -1,6 +1,7 @@
 // Load .env before anything else (no-op if vars already set by the shell)
 import { config as loadDotenv } from 'dotenv';
-loadDotenv();
+import { resolve } from 'path';
+loadDotenv({ path: resolve(process.cwd(), '.env') });
 
 import { runSetupIfNeeded } from './utils/firstRunSetup';
 import express, { type Request, Response, NextFunction } from "express";
