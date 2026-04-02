@@ -11,17 +11,36 @@ echo "=================================="
 # Install Node.js if missing
 if ! command -v node &> /dev/null; then
     echo "📦 Installing Node.js..."
-    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-    sudo apt-get install -y nodejs
+    if command -v sudo &> /dev/null; then
+        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+    else
+        echo "❌ sudo not available. Please install Node.js manually:"
+        echo "   curl -fsSL https://deb.nodesource.com/setup_20.x | bash"
+        echo "   apt-get install -y nodejs"
+        exit 1
+    fi
 fi
 
-# Install/start PostgreSQL if missing
-if ! sudo systemctl is-active --quiet postgresql 2>/dev/null; then
-    echo "🗄️ Installing PostgreSQL..."
-    sudo apt-get update
-    sudo apt-get install -y postgresql postgresql-contrib
-    sudo systemctl start postgresql
-    sudo systemctl enable postgresql
+# Check PostgreSQL
+if command -v psql &> /dev/null && pg_isready -h localhost -p 5432 &> /dev/null 2>&1; then
+    echo "✅ PostgreSQL is running"
+else
+    echo "⚠️ PostgreSQL not detected or not running"
+    if command -v sudo &> /dev/null; then
+        echo "🗄️ Installing PostgreSQL..."
+        sudo apt-get update
+        sudo apt-get install -y postgresql postgresql-contrib
+        sudo systemctl start postgresql
+        sudo systemctl enable postgresql
+    else
+        echo "❌ sudo not available. Please ensure PostgreSQL is installed and running:"
+        echo "   apt-get install -y postgresql postgresql-contrib"
+        echo "   systemctl start postgresql"
+        echo "   systemctl enable postgresql"
+        echo ""
+        echo "Or use a cloud database (recommended for containers)"
+    fi
 fi
 
 # Run the quick setup
