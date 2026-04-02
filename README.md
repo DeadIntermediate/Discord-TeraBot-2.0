@@ -2,8 +2,37 @@
 
 ### Created by Josh — Terabyte Gaming Network (TGN)
 
-TeraBot 2.0 is a custom-built **Discord bot** designed for the **Terabyte Gaming Network**, a large-scale multi-server Minecraft network.  
-Built with **Node.js (Discord.js)** for optimal scalability, modularity, and ecosystem support.
+TeraBot 2.0 is a custom-built **Discord bot** designed for the **Terabyte Gaming Network**, a large-scale multi-server Minecraft network.
+
+---
+
+## 🚀 Quick Setup (2 minutes!)
+
+**One command installs everything:**
+
+```bash
+# Ubuntu/Debian - Run this ONE command:
+curl -fsSL https://raw.githubusercontent.com/DeadIntermediate/Discord-TeraBot-2.0/main/quick-setup.sh | bash
+
+# Then edit .env and run:
+npm run dev
+```
+
+**Manual setup:**
+```bash
+# 1. Install Node.js & PostgreSQL
+sudo apt update
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs postgresql postgresql-contrib
+sudo systemctl start postgresql
+
+# 2. Run setup
+./setup.sh
+
+# 3. Configure & start
+nano .env  # Add your Discord bot token
+npm run dev
+```
 
 ---
 

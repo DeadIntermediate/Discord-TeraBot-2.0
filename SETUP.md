@@ -1,53 +1,74 @@
-# 🚀 TeraBot 2.0 Setup Guide
+# 🚀 TeraBot 2.0 Quick Setup
 
-Complete automated setup and installation guide for TeraBot 2.0 Discord bot.
+**Super simple setup - just 3 steps!**
 
-## 🎯 Quick Setup (Recommended)
+## ⚡ Quick Start
 
-### Windows (PowerShell)
-```powershell
-# Run as Administrator (recommended)
-.\setup.ps1
+### 1. Install Prerequisites
+```bash
+# Ubuntu/Debian
+sudo apt update
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs postgresql postgresql-contrib
+
+# Start PostgreSQL
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
 ```
 
-### Linux/macOS (Bash)
+### 2. Run Setup Script
 ```bash
-# Make script executable
 chmod +x setup.sh
-
-# Run the setup script
 ./setup.sh
 ```
 
-## 📋 Setup Script Options
+### 3. Configure & Run
+```bash
+# Edit .env with your Discord bot token
+nano .env
 
-### Windows PowerShell Script (`setup.ps1`)
+# Start the bot
+npm run dev
+```
 
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `-SkipDependencies` | Skip installing Node.js and PostgreSQL | `.\setup.ps1 -SkipDependencies` |
-| `-RepairMode` | Clean and reinstall all dependencies | `.\setup.ps1 -RepairMode` |
-| `-CloudDatabase` | Skip local PostgreSQL setup | `.\setup.ps1 -CloudDatabase` |
-| `-DatabaseUrl` | Use specific database URL | `.\setup.ps1 -DatabaseUrl "postgresql://..."` |
+## 🎯 What the Setup Does
 
-### Linux/macOS Bash Script (`setup.sh`)
+- ✅ Checks Node.js & npm
+- ✅ Verifies PostgreSQL connection
+- ✅ Creates `.env` configuration file
+- ✅ Installs npm dependencies
+- ✅ Sets up database schema
 
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `--skip-dependencies` | Skip installing Node.js and PostgreSQL | `./setup.sh --skip-dependencies` |
-| `--repair` | Clean and reinstall all dependencies | `./setup.sh --repair` |
-| `--cloud-database` | Skip local PostgreSQL setup | `./setup.sh --cloud-database` |
-| `--database-url` | Use specific database URL | `./setup.sh --database-url "postgresql://..."` |
+## 🆘 Troubleshooting
 
-## 🛠️ What the Setup Scripts Do
+**"Node.js not found"**
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
 
-### 1. **System Dependencies**
-- ✅ Install Node.js (v18+ LTS)
-- ✅ Install npm (latest)
-- ✅ Install PostgreSQL (v17 for Windows, latest for Linux/macOS)
-- ✅ Configure system PATH variables
+**"PostgreSQL not detected"**
+```bash
+sudo systemctl start postgresql
+# OR use a cloud database like Neon, Supabase, etc.
+```
 
-### 2. **Database Setup**
+**Memory issues during npm install**
+```bash
+NODE_OPTIONS="--max-old-space-size=8192" npm install
+```
+
+## 📁 Project Structure
+
+```
+terabot/
+├── client/          # React dashboard
+├── server/          # Discord bot backend
+├── shared/          # TypeScript types
+├── migrations/      # Database migrations
+├── setup.sh         # Quick setup script
+└── package.json     # Dependencies
+```
 - ✅ Install and start PostgreSQL service
 - ✅ Create database and user (if using local PostgreSQL)
 - ✅ Test database connectivity
