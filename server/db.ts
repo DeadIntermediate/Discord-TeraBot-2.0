@@ -4,7 +4,10 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 import { warn } from './utils/logger';
 
-if (!process.env.DATABASE_URL && process.env.SKIP_DB !== 'true') {
+const databaseUrl = process.env.DATABASE_URL;
+const skipDb = process.env.SKIP_DB === 'true';
+
+if (!databaseUrl && !skipDb) {
   throw new Error(
     "DATABASE_URL must be set. Did you forget to provision a database? If you want to skip DB for local dev, set SKIP_DB=true",
   );

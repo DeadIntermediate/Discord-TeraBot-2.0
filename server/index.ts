@@ -1,14 +1,6 @@
-// Load .env before anything else (no-op if vars already set by the shell)
-import { config as loadDotenv } from 'dotenv';
-import { resolve } from 'path';
-
-// Try to load from project root (where .env should be)
-loadDotenv({ path: resolve(process.cwd(), '.env') });
-
-// If still not loaded from typical locations, try parent directory
-if (!process.env.DATABASE_URL && process.env.SKIP_DB !== 'true') {
-  loadDotenv({ path: resolve(process.cwd(), '..', '.env') });
-}
+// Load and validate configuration before anything else
+import { loadConfig } from './utils/configLoader';
+loadConfig();
 
 import { runSetupIfNeeded } from './utils/firstRunSetup';
 import express, { type Request, Response, NextFunction } from "express";
