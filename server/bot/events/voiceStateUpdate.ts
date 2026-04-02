@@ -2,7 +2,6 @@ import { VoiceState } from 'discord.js';
 import { storage } from '../../storage';
 import { calculateLevel } from '../../utils/xp';
 import { info, debug, error } from '../../utils/logger';
-import { handleTTSVoiceStateUpdate } from '../commands/tts';
 import { assignLevelRoles } from './messageCreate';
 import { db } from '../../db';
 import { discordServers } from '../../../shared/schema';
@@ -16,8 +15,6 @@ const VOICE_XP_PER_MINUTE = 2;
 const VOICE_XP_INTERVAL_MS = 60_000;
 
 export async function voiceStateUpdateHandler(oldState: VoiceState, newState: VoiceState) {
-  handleTTSVoiceStateUpdate(oldState, newState);
-
   const userId = newState.id;
   const guildId = newState.guild.id;
   const sessionKey = `${guildId}-${userId}`;

@@ -268,11 +268,12 @@ install_dependencies() {
         return 1
     fi
     
-    npm install --omit=optional && {
+    NODE_OPTIONS="--max-old-space-size=4096" npm install --omit=optional && {
         print_status "✅ Node.js dependencies installed successfully!" "$GREEN"
         return 0
     } || {
         print_status "❌ Failed to install dependencies" "$RED"
+        print_status "💡 Try running: NODE_OPTIONS=\"--max-old-space-size=8192\" npm install --omit=optional" "$YELLOW"
         return 1
     }
 }

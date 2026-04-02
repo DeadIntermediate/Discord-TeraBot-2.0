@@ -15,7 +15,7 @@ fi
 # Check if node_modules exists
 if [ ! -d node_modules ]; then
     echo "Installing Node.js dependencies..."
-    npm install
+    NODE_OPTIONS="--max-old-space-size=4096" npm install
 fi
 
 # Load environment variables from .env

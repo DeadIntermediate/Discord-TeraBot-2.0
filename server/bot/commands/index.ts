@@ -7,7 +7,6 @@ import { roleReactionCommands } from './roleReactions'
 import * as streamsCommand from './streams'
 import * as gamesCommand from './games'
 import * as helpCommand from './help'
-import { ttsCommand } from './tts'
 import { contextMenuCommands } from './contextMenus'
 import { panelCommand } from './panels'
 import { configCommand, levelRoleCommand } from './config'
@@ -24,7 +23,6 @@ export const commands = [
   streamsCommand,
   gamesCommand,
   helpCommand,
-  ttsCommand,
   configCommand,
   levelRoleCommand,
 ]
